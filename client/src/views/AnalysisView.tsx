@@ -21,9 +21,30 @@ const loadingPhrases = [
 ];
 
 const nudges = [
-  { id: 1, title: "Analyze Attack Vector", desc: "Map the blast radius of an active threat.", icon: FileTerminal, prompt: "I have a Metasploit log. Guide me through analyzing the primary attack vector.", color: "from-red-600 to-red-900" },
-  { id: 2, title: "Defensive Blueprint", desc: "Generate infrastructure patching rules.", icon: Network, prompt: "Generate a defensive Terraform blueprint to lock down my external SSH ports.", color: "from-slate-800 to-black" },
-  { id: 3, title: "Zero-Day Explanation", desc: "Understand complex exploits step-by-step.", icon: Code2, prompt: "Act as my cyber mentor. Explain how a buffer overflow attack works step-by-step.", color: "from-red-500 to-red-800" }
+  { 
+    id: 1, 
+    title: "Analyze Attack Vector", 
+    desc: "Map the blast radius of an active threat.", 
+    icon: FileTerminal, 
+    prompt: "I have a Metasploit log. Guide me through analyzing the primary attack vector.", 
+    img: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=500&q=80" 
+  },
+  { 
+    id: 2, 
+    title: "Defensive Blueprint", 
+    desc: "Generate infrastructure patching rules.", 
+    icon: Network, 
+    prompt: "Generate a defensive Terraform blueprint to lock down my external SSH ports.", 
+    img: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=500&q=80" 
+  },
+  { 
+    id: 3, 
+    title: "Zero-Day Explanation", 
+    desc: "Understand complex exploits step-by-step.", 
+    icon: Code2, 
+    prompt: "Act as my cyber mentor. Explain how a buffer overflow attack works step-by-step.", 
+    img: "https://images.unsplash.com/photo-1579567761406-4684ee0c75b6?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" 
+  }
 ];
 
 export default function AnalysisView({ state, setState }: any) {
@@ -162,16 +183,25 @@ export default function AnalysisView({ state, setState }: any) {
              <h3 className="text-2xl font-black text-black dark:text-white mb-2 tracking-tight">Jarvis Intelligence Engine</h3>
              <p className="text-sm text-slate-500 dark:text-slate-400 mb-10 text-center max-w-md font-medium">How can I assist your operations today? Upload telemetry or select a quick action below.</p>
              
+             {/* Themed Image Nudge Cards - Natural Colors */}
              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl px-4">
                 {nudges.map((nudge) => (
                   <motion.div 
                     key={nudge.id} 
                     whileHover={{ y: -5, scale: 1.02 }}
                     onClick={() => executeAction(nudge.prompt)}
-                    className="relative rounded-3xl overflow-hidden cursor-pointer shadow-lg group border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                    className="relative rounded-3xl overflow-hidden cursor-pointer shadow-lg group border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col"
                   >
-                    <div className={cn("h-24 w-full bg-gradient-to-br opacity-90 group-hover:opacity-100 transition-opacity duration-500", nudge.color)} />
-                    <div className="p-5 relative bg-white dark:bg-slate-900">
+                    {/* Clean Image Container */}
+                    <div className="h-28 w-full relative overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0">
+                      <img 
+                        src={nudge.img} 
+                        alt={nudge.title} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                      />
+                    </div>
+                    
+                    <div className="p-5 relative bg-white dark:bg-slate-900 flex-1">
                       <div className="flex items-center gap-2 mb-2">
                          <nudge.icon className="w-4 h-4 text-red-600 dark:text-red-500" />
                          <h4 className="font-bold text-sm text-black dark:text-white">{nudge.title}</h4>
@@ -269,7 +299,6 @@ export default function AnalysisView({ state, setState }: any) {
           )}
         </div>
 
-        {/* The Red/Black Glowing Execution Border */}
         <div className={cn("relative rounded-[2rem] p-[2px] transition-all duration-500 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-sm border border-slate-200 dark:border-slate-800", isExecuting ? "bg-gradient-to-r from-red-600 via-black to-red-600 dark:via-white bg-[length:200%_auto] animate-[pulse_2s_ease-in-out_infinite] border-transparent" : "")}>
           <div className="flex items-end gap-3 p-2 bg-white dark:bg-slate-950 rounded-[calc(2rem-2px)]">
             <button onClick={handleUploadClick} className="p-3 text-slate-400 hover:text-red-600 transition-colors rounded-full hover:bg-red-50 dark:hover:bg-red-900/30 shrink-0">

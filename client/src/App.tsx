@@ -7,8 +7,8 @@ import { twMerge } from 'tailwind-merge';
 import AnalysisView from './views/AnalysisView';
 import DashboardView from './views/DashboardView';
 import TelemetryView from './views/TelemetryView';
-import ReportsView from './views/ReportsView';
 import MitigationView from './views/MitigationView';
+import ReportsView from './views/ReportsView';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -61,9 +61,44 @@ export default function App() {
   return (
     <div ref={mainRef} className="relative min-h-screen bg-[#F8FAFC] dark:bg-[#0B1121] transition-colors duration-500 flex font-sans text-slate-800 dark:text-slate-200 p-4 gap-6 overflow-hidden">
       
-      {/* Red Ambient Background Glow */}
-      <div className="absolute bottom-0 left-0 right-0 h-[40vh] pointer-events-none z-0 overflow-hidden transition-opacity duration-500 opacity-100 dark:opacity-40">
-        <motion.div animate={{ x: ["0%", "-50%"] }} transition={{ repeat: Infinity, duration: 25, ease: "linear" }} className="absolute bottom-[-20%] left-0 w-[200%] h-full opacity-30 mix-blend-multiply dark:mix-blend-screen" style={{ background: 'radial-gradient(ellipse at center, rgba(220,38,38,0.15) 0%, rgba(255,255,255,0) 70%)', transform: 'scaleY(0.5)' }} />
+      {/* Red Ambient Wavy Code Background */}
+      <div 
+        className="absolute bottom-0 left-0 right-0 h-[60vh] pointer-events-none z-0 overflow-hidden transition-opacity duration-500 opacity-100 dark:opacity-80" 
+        style={{ 
+          maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)', 
+          WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)' 
+        }}
+      >
+        {/* Base Red Glow */}
+        <motion.div 
+          animate={{ x: ["0%", "-50%"] }} 
+          transition={{ repeat: Infinity, duration: 25, ease: "linear" }} 
+          className="absolute bottom-[-20%] left-0 w-[200%] h-full opacity-30 mix-blend-multiply dark:mix-blend-screen" 
+          style={{ background: 'radial-gradient(ellipse at center, rgba(220,38,38,0.2) 0%, rgba(255,255,255,0) 70%)', transform: 'scaleY(0.5)' }} 
+        />
+
+        {/* Animated Cyber Code Waves */}
+        <div className="absolute inset-0 flex flex-col justify-end pb-2 opacity-30 dark:opacity-40 mix-blend-overlay dark:mix-blend-lighten">
+          {[...Array(6)].map((_, i) => {
+            const direction = i % 2 === 0 ? 1 : -1;
+            return (
+              <motion.div
+                key={i}
+                animate={{
+                  x: direction === 1 ? ["0%", "-50%"] : ["-50%", "0%"],
+                  y: ["0px", `${12 + i * 2}px`, "0px", `-${12 + i * 2}px`, "0px"]
+                }}
+                transition={{
+                  x: { repeat: Infinity, duration: 40 + i * 15, ease: "linear" },
+                  y: { repeat: Infinity, duration: 8 + i * 2, ease: "easeInOut" }
+                }}
+                className="whitespace-nowrap font-mono text-[11px] md:text-xs text-red-600 dark:text-red-500 leading-[2.5] tracking-[0.2em] select-none"
+              >
+                {`0x${(i * 1024 + 255).toString(16).toUpperCase()} NULL_PTR_DEREF [SYS_EXECVE] PAYLOAD_DELIVERED // TACTIC_TA000${2+i} // BYPASS_ICE_PROTOCOL `.repeat(15)}
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Floating Sidebar */}
@@ -142,8 +177,8 @@ export default function App() {
              {activeView === 'Analysis' && <AnalysisView key="analysis" state={analysisState} setState={setAnalysisState} />}
              {activeView === 'Dashboards' && <DashboardView key="dashboard" />}
              {activeView === 'Telemetry' && <TelemetryView key="telemetry" />}
+             {activeView === 'Mitigation' && <MitigationView key="mitigation" />}
              {activeView === 'Reports' && <ReportsView key="reports" />}
-              {activeView === 'Mitigation' && <MitigationView key="mitigation" />}
            </AnimatePresence>
         </div>
       </main>
