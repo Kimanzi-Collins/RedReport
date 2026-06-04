@@ -8,6 +8,7 @@ import AnalysisView from './views/AnalysisView';
 import DashboardView from './views/DashboardView';
 import TelemetryView from './views/TelemetryView';
 import ReportsView from './views/ReportsView';
+import MitigationView from './views/MitigationView';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -31,7 +32,8 @@ export default function App() {
     selectedFiles: [] as File[],
     promptText: '',
     isExecuting: false,
-    chatHistory: [] as { id: string; role: 'user' | 'jarvis'; content: string }[]
+    // Added the optional files string array here:
+    chatHistory: [] as { id: string; role: 'user' | 'jarvis'; content: string; files?: string[] }[]
   });
 
   const handleNewSession = () => {
@@ -136,11 +138,12 @@ export default function App() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto pb-10 pr-4 mt-4 custom-scrollbar relative">
+       <div className="flex-1 overflow-y-auto pb-10 pr-4 mt-4 custom-scrollbar relative">
            <AnimatePresence mode="wait">
              {activeView === 'Analysis' && <AnalysisView key="analysis" state={analysisState} setState={setAnalysisState} />}
              {activeView === 'Dashboards' && <DashboardView key="dashboard" />}
              {activeView === 'Telemetry' && <TelemetryView key="telemetry" />}
+             {activeView === 'Mitigation' && <MitigationView key="mitigation" />}
              {activeView === 'Reports' && <ReportsView key="reports" />}
            </AnimatePresence>
         </div>

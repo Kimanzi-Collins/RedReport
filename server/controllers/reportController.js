@@ -4,6 +4,7 @@ const generateReport = async (req, res) => {
     try {
         const preferredProvider = req.body.provider || 'gemini';
         const userText = req.body.prompt || '';
+        const reportType = req.body.reportType || 'executive'; // 'executive' or 'investor'
         let combinedLogs = '';
 
         if (req.files && req.files.length > 0) {
@@ -12,21 +13,45 @@ const generateReport = async (req, res) => {
             });
         }
 
-        // --- THE UPGRADED MASTER PERSONA PROMPT ---
-        const systemPrompt = `You are Jarvis, an elite Cyber Ninja Assistant and digital forensics expert. You assist the user, Collins, with threat intelligence, penetration testing guidance, defensive infrastructure, and cybersecurity mentorship.
+        // --- DYNAMIC PERSONA ROUTING ---
+        let reportTemplate = "";
         
-        CRITICAL OUTPUT DIRECTIVES FOR LOG ANALYSIS:
-        When the user uploads telemetry logs, you MUST structure your response EXACTLY in this order:
+        if (reportType === 'investor') {
+            reportTemplate = `
+        # 📈 Cyber Risk & Financial Impact Report
+        > **Status:** [CRITICAL / HIGH / MODERATE] | **Risk Exposure:** [Financial/Reputational]
 
-        1. Start with a brief, conversational 2-3 sentence summary of the situation, addressing Collins directly.
-        2. On a new line, explicitly state: "**Your PDF is ready Sir.**"
-        3. Below that, provide the highly-visual, executive-ready Markdown report. Use standard Markdown and inline HTML for visuals (NO Mermaid.js).
+        ## 1. Investor Briefing
+        [Write a concise, high-level paragraph explaining the security event purely in terms of business impact, avoiding deep technical jargon like 'buffer overflow' or 'reverse shell'. Use terms like 'unauthorized access' or 'data exposure'.]
 
+        ## 2. Liability & Compliance Exposure
+        | Risk Category | Exposure Level | Potential Impact |
+        |---------------|----------------|------------------|
+        | **Regulatory (GDPR/CCPA)** | [High/Low] | [Fines/Penalties] |
+        | **Brand Reputation** | [High/Low] | [Customer Trust] |
+        | **Business Continuity** | [High/Low] | [Downtime/Revenue Loss] |
+
+        ## 3. Incident Timeline (Business Context)
+        1. 🕒 **Initial Breach:** [When and how the perimeter was compromised]
+        2. 📉 **Impact Event:** [What business assets were exposed]
+        3. 🛡️ **Containment:** [Action taken to stop the bleeding]
+
+        ## 4. Strategic Mitigation & ROI
+        <div style="margin: 15px 0; padding: 10px; background-color: #F3F4F6; border-left: 4px solid #0EA5E9;">
+           <strong>Recommended CAPEX/OPEX Security Investment:</strong>
+           <div style="width: 100%; background-color: #E5E7EB; border-radius: 5px; margin-top: 5px;">
+              <div style="width: 75%; background-color: #0EA5E9; height: 10px; border-radius: 5px;"></div>
+           </div>
+           <p style="margin-top:8px; font-size:12px; color:#4B5563;">Implementation of Zero-Trust Architecture required to protect future shareholder value.</p>
+        </div>`;
+        } else {
+            // Standard Executive Template
+            reportTemplate = `
         # 🛡️ Threat Intelligence Summary
         > **Status:** [CRITICAL / HIGH / MEDIUM / LOW] | **Primary Vector:** [Short name]
 
         ## 1. Executive Summary
-        [Write a concise, high-level paragraph of the breach and business impact.]
+        [Write a concise, high-level paragraph of the breach and technical impact.]
 
         ## 2. Risk Heatmap
         | Metric | Status | Severity |
@@ -52,20 +77,25 @@ const generateReport = async (req, res) => {
         ## 5. Defensive Blueprint
         ### 🚨 Immediate Actions
         * [Action 1]
-        * [Action 2]
+        * [Action 2]`;
+        }
 
-        If NO logs are provided, ignore the template above and simply answer the user's query directly as an expert cyber mentor. Keep your tone sharp and analytical.`;
+        const systemPrompt = `You are Jarvis, an elite Cyber Ninja Assistant. 
+        CRITICAL OUTPUT DIRECTIVES:
+        1. Start with a brief, conversational 2-3 sentence summary addressing Collins directly.
+        2. On a new line, explicitly state: "**Your PDF is ready Sir.**"
+        3. Below that, provide the highly-visual Markdown report matching this EXACT template:
+        ${reportTemplate}
+        
+        Do not use Mermaid.js. Use inline HTML for visual bars as requested in the template.`;
 
         const userPrompt = combinedLogs 
             ? `Here are the telemetry logs to analyze:\n${combinedLogs}\n\nUser Query: ${userText}` 
             : userText;
 
-        if (!userPrompt.trim()) {
-            return res.status(400).json({ error: 'Please provide a prompt or upload logs.' });
-        }
+        if (!userPrompt.trim()) return res.status(400).json({ error: 'Please provide a prompt or upload logs.' });
 
         const reportContent = await generateWithFailover(systemPrompt, userPrompt, preferredProvider);
-
         res.status(200).json({ success: true, reportContent: reportContent });
 
     } catch (error) {

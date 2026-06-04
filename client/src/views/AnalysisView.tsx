@@ -31,6 +31,7 @@ export default function AnalysisView({ state, setState }: any) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [phraseIndex, setPhraseIndex] = useState(0);
+  const [reportType, setReportType] = useState<'executive'|'investor'>('executive');
 
   useEffect(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), [chatHistory, isExecuting]);
 
@@ -57,33 +58,48 @@ export default function AnalysisView({ state, setState }: any) {
     const finalPrompt = forcedPrompt || promptText;
     if (!finalPrompt.trim() && selectedFiles.length === 0) return;
 
-    const userMessage = { id: Date.now().toString(), role: 'user', content: finalPrompt };
+    // 1. Cache the files for the API call and extract names for the chat UI
+    const filesToSend = [...selectedFiles];
+    const fileNames = filesToSend.map(f => f.name);
+
+    const userMessage = { 
+      id: Date.now().toString(), 
+      role: 'user', 
+      content: finalPrompt,
+      files: fileNames // Bind the files to this specific message
+    };
     
     const conversationContext = chatHistory.map((m: any) => `${m.role === 'jarvis' ? 'Assistant' : 'User'}: ${m.content}`).join('\n');
     const enrichedPrompt = chatHistory.length > 0 
       ? `Previous conversation context:\n${conversationContext}\n\nUser's new input:\n${finalPrompt}` 
       : finalPrompt;
 
-    setState((prev: any) => ({ ...prev, chatHistory: [...prev.chatHistory, userMessage], promptText: '', isExecuting: true }));
+    // 2. Instantly update UI and WIPE the input file array
+    setState((prev: any) => ({ 
+      ...prev, 
+      chatHistory: [...prev.chatHistory, userMessage], 
+      promptText: '', 
+      isExecuting: true,
+      selectedFiles: [] 
+    }));
 
     try {
-      const data = await analyzeLogs('report', selectedFiles, 'gemini', enrichedPrompt);
+      // 3. Pass the cached files (filesToSend) instead of state (which is now empty)
+      const data = await analyzeLogs('report', filesToSend, 'gemini', enrichedPrompt, reportType);
       const rawContent = data.reportContent || JSON.stringify(data.data, null, 2);
       const jarvisMessage = { id: (Date.now() + 1).toString(), role: 'jarvis', content: rawContent };
 
-      // Save to Reports LocalStorage silently
       const existingReports = JSON.parse(localStorage.getItem('redReport_reports') || '[]');
       existingReports.push({ id: jarvisMessage.id, date: new Date().toISOString(), title: `Threat Intel: ${new Date().toLocaleTimeString()}`, content: jarvisMessage.content });
       localStorage.setItem('redReport_reports', JSON.stringify(existingReports));
 
-      setState((prev: any) => ({ ...prev, chatHistory: [...prev.chatHistory, jarvisMessage], isExecuting: false, selectedFiles: [] }));
+      setState((prev: any) => ({ ...prev, chatHistory: [...prev.chatHistory, jarvisMessage], isExecuting: false }));
     } catch (error) {
       setState((prev: any) => ({ ...prev, isExecuting: false, chatHistory: [...prev.chatHistory, { id: Date.now().toString(), role: 'jarvis', content: "⚠️ **System Error:** Connection severed." }] }));
     }
   };
 
   const handleFinalizeReport = async (messageContent: string, messageId: string) => {
-    // 1. Split the conversational text from the actual report
     const splitDelimiter = "**Your PDF is ready Sir.**";
     let reportMarkdown = messageContent;
     
@@ -93,10 +109,8 @@ export default function AnalysisView({ state, setState }: any) {
         reportMarkdown = messageContent.split("Your PDF is ready Sir.")[1].trim();
     }
 
-    // 2. Parse the Markdown into pristine HTML
     const htmlContent = await marked.parse(reportMarkdown);
 
-    // 3. Inject CSS and the parsed HTML into the PDF Template
     const printElement = document.createElement('div');
     printElement.innerHTML = `
       <style>
@@ -151,7 +165,6 @@ export default function AnalysisView({ state, setState }: any) {
              <h3 className="text-2xl font-semibold text-black dark:text-white mb-2">Jarvis Intelligence Engine</h3>
              <p className="text-sm text-slate-500 dark:text-slate-400 mb-10 text-center max-w-md">How can I assist your operations today? Upload telemetry or select a quick action below.</p>
              
-             {/* Refined Glassmorphism Nudge Cards */}
              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl px-4">
                 {nudges.map((nudge) => (
                   <motion.div 
@@ -183,6 +196,18 @@ export default function AnalysisView({ state, setState }: any) {
               
               <div className="flex flex-col gap-2 max-w-[85%]">
                 <div className={cn("rounded-[2rem] p-6 shadow-sm", msg.role === 'user' ? "bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-100 dark:border-cyan-900/50 text-slate-800 dark:text-slate-200" : "bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-white dark:border-slate-800 text-slate-800 dark:text-slate-200")}>
+                  
+                  {/* Render files attached to this specific user message */}
+                  {msg.role === 'user' && msg.files && msg.files.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {msg.files.map((fileName: string, idx: number) => (
+                        <div key={idx} className="flex items-center gap-1.5 bg-cyan-100/50 dark:bg-cyan-900/30 text-cyan-800 dark:text-cyan-300 px-2.5 py-1 rounded-md text-xs font-semibold border border-cyan-200/50 dark:border-cyan-800/50">
+                          <Database className="w-3 h-3" /> {fileName}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {msg.role === 'user' ? (
                     <p className="text-sm whitespace-pre-wrap font-medium">{msg.content}</p>
                   ) : (
@@ -223,16 +248,32 @@ export default function AnalysisView({ state, setState }: any) {
 
       {/* Input Area */}
       <div className="w-full shrink-0 flex flex-col gap-2 relative z-20">
-        {selectedFiles.length > 0 && (
-          <div className="flex flex-wrap gap-2 px-4">
-            {selectedFiles.map((file: File, idx: number) => (
-              <div key={idx} className="flex items-center gap-2 bg-cyan-100 dark:bg-cyan-900/40 text-cyan-800 dark:text-cyan-300 px-3 py-1.5 rounded-full text-xs font-semibold border border-cyan-200 dark:border-cyan-800 shadow-sm">
-                <Database className="w-3 h-3" /> {file.name}
-                <button onClick={() => removeFile(idx)} className="hover:text-red-500 transition-colors"><X className="w-3 h-3"/></button>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="flex justify-between items-end px-2">
+          
+          {/* Files sitting in the staging area (pre-execution) */}
+          {selectedFiles.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {selectedFiles.map((file: File, idx: number) => (
+                <div key={idx} className="flex items-center gap-2 bg-cyan-100 dark:bg-cyan-900/40 text-cyan-800 dark:text-cyan-300 px-3 py-1.5 rounded-full text-xs font-semibold border border-cyan-200 dark:border-cyan-800 shadow-sm">
+                  <Database className="w-3 h-3" /> {file.name}
+                  <button onClick={() => removeFile(idx)} className="hover:text-red-500 transition-colors"><X className="w-3 h-3"/></button>
+                </div>
+              ))}
+            </div>
+          ) : <div />}
+
+          {/* REPORT TYPE TOGGLE: Hidden unless files are actively staged */}
+          {selectedFiles.length > 0 && (
+            <div className="flex bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-1 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
+               <button onClick={() => setReportType('executive')} className={cn("px-4 py-1.5 rounded-full text-xs font-bold transition-all", reportType === 'executive' ? "bg-black text-white dark:bg-white dark:text-black shadow-md" : "text-slate-500 hover:text-black dark:hover:text-white")}>
+                 Executive Intel
+               </button>
+               <button onClick={() => setReportType('investor')} className={cn("px-4 py-1.5 rounded-full text-xs font-bold transition-all", reportType === 'investor' ? "bg-black text-white dark:bg-white dark:text-black shadow-md" : "text-slate-500 hover:text-black dark:hover:text-white")}>
+                 Investor Brief
+               </button>
+            </div>
+          )}
+        </div>
 
         <div className={cn("relative rounded-[2rem] p-[2px] transition-all duration-500 bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl shadow-lg border border-white dark:border-slate-800", isExecuting ? "shadow-[0_0_20px_rgba(6,182,212,0.3)] ring-1 ring-cyan-500/50" : "")}>
           <div className="flex items-end gap-3 p-2">
