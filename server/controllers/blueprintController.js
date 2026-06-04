@@ -1,6 +1,5 @@
 // server/controllers/blueprintController.js
-const { Anthropic } = require('@anthropic-ai/sdk');
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const { generateWithFailover } = require('../services/llmService');
 
 const generateBlueprint = async (req, res) => {
     try {
@@ -8,10 +7,14 @@ const generateBlueprint = async (req, res) => {
             return res.status(400).json({ error: 'No data files provided for defensive orchestration.' });
         }
 
+        const preferredProvider = req.body.provider || 'gemini';
+
         let combinedLogs = '';
         req.files.forEach(file => {
             combinedLogs += `\n--- File: ${file.originalname} ---\n${file.buffer.toString('utf-8')}\n`;
         });
+
+        console.log(`Generating hardening blueprint with preferred provider: ${preferredProvider}`);
 
         const systemPrompt = `You are an elite DevSecOps Engineer and Secure Infrastructure Architect. Analyze the technical breaches shown in the logs and generate concrete, production-grade defensive orchestration files.
 
@@ -28,17 +31,13 @@ const generateBlueprint = async (req, res) => {
         ## 3. Automation Playbook
         Provide a complete, syntax-valid Ansible Playbook or Terraform snippet that automates the deployment of these specific remediation tasks. Ensure all variables are clearly commented.`;
 
-        const message = await anthropic.messages.create({
-            model: "claude-3-5-sonnet-20240620",
-            max_tokens: 3500,
-            temperature: 0.3, // Slightly higher for flexible engineering design output
-            system: systemPrompt,
-            messages: [{ role: "user", content: `Generate infrastructure remediation scripts based on these logs:\n${combinedLogs}` }]
-        });
+        const userPrompt = `Generate infrastructure remediation scripts based on these logs:\n${combinedLogs}`;
+
+        const blueprintContent = await generateWithFailover(systemPrompt, userPrompt, preferredProvider);
 
         res.status(200).json({
             success: true,
-            blueprintContent: message.content[0].text
+            blueprintContent: blueprintContent
         });
 
     } catch (error) {
