@@ -5,6 +5,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import ReactMarkdown from 'react-markdown';
 import html2pdf from 'html2pdf.js';
+import { marked } from 'marked';
 import { analyzeLogs } from '../services/api';
 
 function cn(...inputs: ClassValue[]) {
@@ -66,10 +67,11 @@ export default function AnalysisView({ state, setState }: any) {
     setState((prev: any) => ({ ...prev, chatHistory: [...prev.chatHistory, userMessage], promptText: '', isExecuting: true }));
 
     try {
-      // The backend now gracefully handles zero files!
       const data = await analyzeLogs('report', selectedFiles, 'gemini', enrichedPrompt);
-      const jarvisMessage = { id: (Date.now() + 1).toString(), role: 'jarvis', content: data.reportContent || JSON.stringify(data.data, null, 2) };
+      const rawContent = data.reportContent || JSON.stringify(data.data, null, 2);
+      const jarvisMessage = { id: (Date.now() + 1).toString(), role: 'jarvis', content: rawContent };
 
+      // Save to Reports LocalStorage silently
       const existingReports = JSON.parse(localStorage.getItem('redReport_reports') || '[]');
       existingReports.push({ id: jarvisMessage.id, date: new Date().toISOString(), title: `Threat Intel: ${new Date().toLocaleTimeString()}`, content: jarvisMessage.content });
       localStorage.setItem('redReport_reports', JSON.stringify(existingReports));
@@ -80,9 +82,37 @@ export default function AnalysisView({ state, setState }: any) {
     }
   };
 
-  const handleFinalizeReport = (messageContent: string, messageId: string) => {
+  const handleFinalizeReport = async (messageContent: string, messageId: string) => {
+    // 1. Split the conversational text from the actual report
+    const splitDelimiter = "**Your PDF is ready Sir.**";
+    let reportMarkdown = messageContent;
+    
+    if (messageContent.includes(splitDelimiter)) {
+        reportMarkdown = messageContent.split(splitDelimiter)[1].trim();
+    } else if (messageContent.includes("Your PDF is ready Sir.")) {
+        reportMarkdown = messageContent.split("Your PDF is ready Sir.")[1].trim();
+    }
+
+    // 2. Parse the Markdown into pristine HTML
+    const htmlContent = await marked.parse(reportMarkdown);
+
+    // 3. Inject CSS and the parsed HTML into the PDF Template
     const printElement = document.createElement('div');
     printElement.innerHTML = `
+      <style>
+        .pdf-content h1, .pdf-content h2, .pdf-content h3 { color: #111827; margin-top: 24px; margin-bottom: 12px; }
+        .pdf-content h1 { border-bottom: 2px solid #E5E7EB; padding-bottom: 8px; font-size: 24px; }
+        .pdf-content h2 { font-size: 18px; color: #DC2626; }
+        .pdf-content p { margin-bottom: 16px; }
+        .pdf-content table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
+        .pdf-content th, .pdf-content td { border: 1px solid #E5E7EB; padding: 12px; text-align: left; }
+        .pdf-content th { background-color: #F9FAFB; font-weight: bold; color: #374151; }
+        .pdf-content tr:nth-child(even) { background-color: #F9FAFB; }
+        .pdf-content blockquote { border-left: 4px solid #0EA5E9; padding: 12px 16px; color: #4B5563; background: #F3F4F6; margin: 20px 0; font-weight: bold;}
+        .pdf-content ul, .pdf-content ol { margin-bottom: 16px; padding-left: 24px; }
+        .pdf-content li { margin-bottom: 6px; }
+        .pdf-content code { background-color: #F3F4F6; padding: 2px 4px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #DC2626; }
+      </style>
       <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827; padding: 40px; line-height: 1.6;">
         <div style="border-bottom: 4px solid #DC2626; padding-bottom: 20px; margin-bottom: 30px; display: flex; align-items: flex-end; justify-content: space-between;">
           <div>
@@ -94,7 +124,9 @@ export default function AnalysisView({ state, setState }: any) {
             REF: ${messageId.slice(-6)}
           </div>
         </div>
-        <div style="font-size: 14px;">${messageContent.replace(/\n/g, '<br/>')}</div>
+        <div class="pdf-content" style="font-size: 14px;">
+           ${htmlContent}
+        </div>
       </div>
     `;
 
@@ -159,7 +191,7 @@ export default function AnalysisView({ state, setState }: any) {
                     </div>
                   )}
                 </div>
-                {msg.role === 'jarvis' && (
+                {msg.role === 'jarvis' && msg.content.includes("Your PDF is ready") && (
                   <button onClick={() => handleFinalizeReport(msg.content, msg.id)} className="self-start flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors ml-4 bg-white/50 dark:bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm">
                     <Download className="w-3 h-3" /> Exfiltrate Intel Payload
                   </button>

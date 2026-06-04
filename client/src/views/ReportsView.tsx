@@ -2,20 +2,49 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Download, ShieldAlert, Clock } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
+import { marked } from 'marked';
 
 export default function ReportsView() {
   const [reports, setReports] = useState<any[]>([]);
 
   useEffect(() => {
-    // Pull saved reports from local storage
     const saved = JSON.parse(localStorage.getItem('redReport_reports') || '[]');
-    // Reverse to show newest first
-    setReports(saved.reverse());
+    // Filter to only show actual reports, not general chatter
+    const filteredReports = saved.filter((r: any) => r.content.includes("Your PDF is ready Sir."));
+    setReports(filteredReports.reverse());
   }, []);
 
-  const handleDownload = (report: any) => {
+  const handleDownload = async (report: any) => {
+    // 1. Isolate the report
+    const splitDelimiter = "**Your PDF is ready Sir.**";
+    let reportMarkdown = report.content;
+    
+    if (report.content.includes(splitDelimiter)) {
+        reportMarkdown = report.content.split(splitDelimiter)[1].trim();
+    } else if (report.content.includes("Your PDF is ready Sir.")) {
+        reportMarkdown = report.content.split("Your PDF is ready Sir.")[1].trim();
+    }
+
+    // 2. Parse Markdown
+    const htmlContent = await marked.parse(reportMarkdown);
+
+    // 3. Render PDF
     const printElement = document.createElement('div');
     printElement.innerHTML = `
+      <style>
+        .pdf-content h1, .pdf-content h2, .pdf-content h3 { color: #111827; margin-top: 24px; margin-bottom: 12px; }
+        .pdf-content h1 { border-bottom: 2px solid #E5E7EB; padding-bottom: 8px; font-size: 24px; }
+        .pdf-content h2 { font-size: 18px; color: #DC2626; }
+        .pdf-content p { margin-bottom: 16px; }
+        .pdf-content table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
+        .pdf-content th, .pdf-content td { border: 1px solid #E5E7EB; padding: 12px; text-align: left; }
+        .pdf-content th { background-color: #F9FAFB; font-weight: bold; color: #374151; }
+        .pdf-content tr:nth-child(even) { background-color: #F9FAFB; }
+        .pdf-content blockquote { border-left: 4px solid #0EA5E9; padding: 12px 16px; color: #4B5563; background: #F3F4F6; margin: 20px 0; font-weight: bold;}
+        .pdf-content ul, .pdf-content ol { margin-bottom: 16px; padding-left: 24px; }
+        .pdf-content li { margin-bottom: 6px; }
+        .pdf-content code { background-color: #F3F4F6; padding: 2px 4px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #DC2626; }
+      </style>
       <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827; padding: 40px; line-height: 1.6;">
         <div style="border-bottom: 4px solid #DC2626; padding-bottom: 20px; margin-bottom: 30px; display: flex; align-items: flex-end; justify-content: space-between;">
           <div>
@@ -24,12 +53,11 @@ export default function ReportsView() {
           </div>
           <div style="text-align: right; color: #4B5563; font-size: 11px; font-weight: bold;">
             GENERATED: ${new Date(report.date).toLocaleDateString()}<br/>
-            ENGINE: Llama 3.1 70B<br/>
             REF: ${report.id.slice(-6)}
           </div>
         </div>
-        <div style="font-size: 14px;">
-           ${report.content.replace(/\n/g, '<br/>')}
+        <div class="pdf-content" style="font-size: 14px;">
+           ${htmlContent}
         </div>
       </div>
     `;
@@ -66,7 +94,7 @@ export default function ReportsView() {
            </div>
            <div>
              <h3 className="font-bold text-black dark:text-white mb-1">{report.title}</h3>
-             <p className="text-xs text-slate-500 dark:text-slate-400 mb-6 line-clamp-2">{report.content.substring(0, 100)}...</p>
+             <p className="text-xs text-slate-500 dark:text-slate-400 mb-6 line-clamp-2">Threat intel and mitigation parameters successfully archived.</p>
            </div>
            <button onClick={() => handleDownload(report)} className="w-full py-3 rounded-xl bg-[#F4F7F9] dark:bg-slate-800 text-black dark:text-white font-semibold text-sm flex items-center justify-center gap-2 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors duration-300">
              <Download className="w-4 h-4"/> Access Secure Dossier

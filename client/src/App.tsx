@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import gsap from 'gsap';
 import { Search, Shield, Database, Wrench, BarChart3, FileText, Moon, Sun, RefreshCw } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -24,7 +23,7 @@ function getGreeting() {
 
 export default function App() {
   const [activeView, setActiveView] = useState('Analysis');
-  const [isDark, setIsDark] = useState(true); // Defaulted to true for the cyber vibe
+  const [isDark, setIsDark] = useState(false); // Defaulted to Light Mode
   const [greeting, setGreeting] = useState(getGreeting());
   const mainRef = useRef<HTMLDivElement>(null);
 
@@ -59,7 +58,9 @@ export default function App() {
   ];
 
   return (
-    <div ref={mainRef} className="relative min-h-screen bg-[#E6EAEF] dark:bg-[#0B1121] transition-colors duration-500 flex font-sans text-slate-800 dark:text-slate-200 p-4 gap-6 overflow-hidden">
+    <div ref={mainRef} className="relative min-h-screen bg-[#EAEFF4] dark:bg-[#0B1121] transition-colors duration-500 flex font-sans text-slate-800 dark:text-slate-200 p-4 gap-6 overflow-hidden">
+      
+      {/* Background Orbs */}
       <div className="absolute bottom-0 left-0 right-0 h-[40vh] pointer-events-none z-0 overflow-hidden transition-opacity duration-500 opacity-100 dark:opacity-30">
         <motion.div animate={{ x: ["0%", "-50%"] }} transition={{ repeat: Infinity, duration: 25, ease: "linear" }} className="absolute bottom-[-20%] left-0 w-[200%] h-full opacity-40 mix-blend-multiply dark:mix-blend-screen" style={{ background: 'radial-gradient(ellipse at center, rgba(14,165,233,0.15) 0%, rgba(255,255,255,0) 70%)', transform: 'scaleY(0.5)' }} />
       </div>
@@ -89,6 +90,7 @@ export default function App() {
         </div>
       </aside>
 
+      {/* Main Content Area */}
       <main className="relative z-10 flex-1 flex flex-col h-[calc(100vh-32px)]">
         <header className="gsap-header h-24 flex items-center justify-between px-2 shrink-0">
           <div className="flex flex-col">
@@ -100,21 +102,21 @@ export default function App() {
             <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">System secure. Engine ready.</p>
           </div>
 
-          {/* Fluid Rounded Square Navigation */}
-          <div className="hidden lg:flex items-center gap-2 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-white dark:border-slate-800 shadow-sm transition-colors duration-500">
+          {/* Premium Pill Navigation */}
+          <div className="hidden lg:flex items-center bg-white dark:bg-slate-900/80 backdrop-blur-md p-1.5 rounded-full shadow-sm border border-slate-100 dark:border-slate-800">
             {navItems.map((item) => (
               <button 
                 key={`top-${item.id}`} 
                 onClick={() => setActiveView(item.id)} 
                 className={cn(
-                  "relative px-5 py-2 text-sm font-semibold transition-colors duration-300 rounded-xl", 
+                  "relative px-6 py-2.5 text-sm font-bold transition-colors duration-300 rounded-full", 
                   activeView === item.id ? "text-white" : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
                 )}
               >
                 {activeView === item.id && (
                   <motion.div 
-                    layoutId="topNavSquare" 
-                    className="absolute inset-0 bg-cyan-600 dark:bg-cyan-500 rounded-xl shadow-md" 
+                    layoutId="topNavPill" 
+                    className="absolute inset-0 bg-[#0ea5e9] rounded-full shadow-md" 
                     transition={{ type: "spring", stiffness: 350, damping: 30 }} 
                   />
                 )}
@@ -124,7 +126,7 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center px-5 py-3 rounded-full shadow-sm border border-white dark:border-slate-800 focus-within:ring-1 focus-within:ring-cyan-500/50 w-72 transition-all">
+            <div className="bg-white dark:bg-slate-900/80 backdrop-blur-md flex items-center px-5 py-3 rounded-full shadow-sm border border-slate-100 dark:border-slate-800 focus-within:ring-2 focus-within:ring-cyan-500/20 w-72 transition-all">
               <Search className="w-4 h-4 text-slate-400" />
               <input type="text" placeholder="Search Workspace..." className="bg-transparent border-none focus:outline-none ml-3 w-full text-sm placeholder:text-slate-400 text-black dark:text-white" />
             </div>
@@ -142,9 +144,7 @@ export default function App() {
              {activeView === 'Reports' && <ReportsView key="reports" />}
            </AnimatePresence>
         </div>
-        
       </main>
     </div>
-    
   );
 }
