@@ -21,9 +21,9 @@ const loadingPhrases = [
 ];
 
 const nudges = [
-  { id: 1, title: "Analyze Attack Vector", desc: "Map the blast radius of an active threat.", icon: FileTerminal, prompt: "I have a Metasploit log. Guide me through analyzing the primary attack vector.", color: "from-cyan-500 to-blue-600" },
-  { id: 2, title: "Defensive Blueprint", desc: "Generate infrastructure patching rules.", icon: Network, prompt: "Generate a defensive Terraform blueprint to lock down my external SSH ports.", color: "from-indigo-500 to-purple-600" },
-  { id: 3, title: "Zero-Day Explanation", desc: "Understand complex exploits step-by-step.", icon: Code2, prompt: "Act as my cyber mentor. Explain how a buffer overflow attack works step-by-step.", color: "from-rose-500 to-orange-600" }
+  { id: 1, title: "Analyze Attack Vector", desc: "Map the blast radius of an active threat.", icon: FileTerminal, prompt: "I have a Metasploit log. Guide me through analyzing the primary attack vector.", color: "from-red-600 to-red-900" },
+  { id: 2, title: "Defensive Blueprint", desc: "Generate infrastructure patching rules.", icon: Network, prompt: "Generate a defensive Terraform blueprint to lock down my external SSH ports.", color: "from-slate-800 to-black" },
+  { id: 3, title: "Zero-Day Explanation", desc: "Understand complex exploits step-by-step.", icon: Code2, prompt: "Act as my cyber mentor. Explain how a buffer overflow attack works step-by-step.", color: "from-red-500 to-red-800" }
 ];
 
 export default function AnalysisView({ state, setState }: any) {
@@ -58,7 +58,6 @@ export default function AnalysisView({ state, setState }: any) {
     const finalPrompt = forcedPrompt || promptText;
     if (!finalPrompt.trim() && selectedFiles.length === 0) return;
 
-    // 1. Cache the files for the API call and extract names for the chat UI
     const filesToSend = [...selectedFiles];
     const fileNames = filesToSend.map(f => f.name);
 
@@ -66,7 +65,7 @@ export default function AnalysisView({ state, setState }: any) {
       id: Date.now().toString(), 
       role: 'user', 
       content: finalPrompt,
-      files: fileNames // Bind the files to this specific message
+      files: fileNames
     };
     
     const conversationContext = chatHistory.map((m: any) => `${m.role === 'jarvis' ? 'Assistant' : 'User'}: ${m.content}`).join('\n');
@@ -74,7 +73,6 @@ export default function AnalysisView({ state, setState }: any) {
       ? `Previous conversation context:\n${conversationContext}\n\nUser's new input:\n${finalPrompt}` 
       : finalPrompt;
 
-    // 2. Instantly update UI and WIPE the input file array
     setState((prev: any) => ({ 
       ...prev, 
       chatHistory: [...prev.chatHistory, userMessage], 
@@ -84,7 +82,6 @@ export default function AnalysisView({ state, setState }: any) {
     }));
 
     try {
-      // 3. Pass the cached files (filesToSend) instead of state (which is now empty)
       const data = await analyzeLogs('report', filesToSend, 'gemini', enrichedPrompt, reportType);
       const rawContent = data.reportContent || JSON.stringify(data.data, null, 2);
       const jarvisMessage = { id: (Date.now() + 1).toString(), role: 'jarvis', content: rawContent };
@@ -122,10 +119,10 @@ export default function AnalysisView({ state, setState }: any) {
         .pdf-content th, .pdf-content td { border: 1px solid #E5E7EB; padding: 12px; text-align: left; }
         .pdf-content th { background-color: #F9FAFB; font-weight: bold; color: #374151; }
         .pdf-content tr:nth-child(even) { background-color: #F9FAFB; }
-        .pdf-content blockquote { border-left: 4px solid #0EA5E9; padding: 12px 16px; color: #4B5563; background: #F3F4F6; margin: 20px 0; font-weight: bold;}
+        .pdf-content blockquote { border-left: 4px solid #DC2626; padding: 12px 16px; color: #111827; background: #F3F4F6; margin: 20px 0; font-weight: bold;}
         .pdf-content ul, .pdf-content ol { margin-bottom: 16px; padding-left: 24px; }
         .pdf-content li { margin-bottom: 6px; }
-        .pdf-content code { background-color: #F3F4F6; padding: 2px 4px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #DC2626; }
+        .pdf-content code { background-color: #F3F4F6; padding: 2px 4px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #DC2626; font-weight: bold; }
       </style>
       <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827; padding: 40px; line-height: 1.6;">
         <div style="border-bottom: 4px solid #DC2626; padding-bottom: 20px; margin-bottom: 30px; display: flex; align-items: flex-end; justify-content: space-between;">
@@ -162,8 +159,8 @@ export default function AnalysisView({ state, setState }: any) {
         {chatHistory.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full pt-10">
              <Shield className="w-16 h-16 text-slate-200 dark:text-slate-800 mb-6" />
-             <h3 className="text-2xl font-semibold text-black dark:text-white mb-2">Jarvis Intelligence Engine</h3>
-             <p className="text-sm text-slate-500 dark:text-slate-400 mb-10 text-center max-w-md">How can I assist your operations today? Upload telemetry or select a quick action below.</p>
+             <h3 className="text-2xl font-black text-black dark:text-white mb-2 tracking-tight">Jarvis Intelligence Engine</h3>
+             <p className="text-sm text-slate-500 dark:text-slate-400 mb-10 text-center max-w-md font-medium">How can I assist your operations today? Upload telemetry or select a quick action below.</p>
              
              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl px-4">
                 {nudges.map((nudge) => (
@@ -173,13 +170,13 @@ export default function AnalysisView({ state, setState }: any) {
                     onClick={() => executeAction(nudge.prompt)}
                     className="relative rounded-3xl overflow-hidden cursor-pointer shadow-lg group border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
                   >
-                    <div className={cn("h-24 w-full bg-gradient-to-br opacity-80 group-hover:opacity-100 transition-opacity duration-500", nudge.color)} />
+                    <div className={cn("h-24 w-full bg-gradient-to-br opacity-90 group-hover:opacity-100 transition-opacity duration-500", nudge.color)} />
                     <div className="p-5 relative bg-white dark:bg-slate-900">
                       <div className="flex items-center gap-2 mb-2">
-                         <nudge.icon className="w-4 h-4 text-slate-700 dark:text-slate-300" />
-                         <h4 className="font-semibold text-sm text-black dark:text-white">{nudge.title}</h4>
+                         <nudge.icon className="w-4 h-4 text-red-600 dark:text-red-500" />
+                         <h4 className="font-bold text-sm text-black dark:text-white">{nudge.title}</h4>
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{nudge.desc}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{nudge.desc}</p>
                     </div>
                   </motion.div>
                 ))}
@@ -189,19 +186,18 @@ export default function AnalysisView({ state, setState }: any) {
           chatHistory.map((msg: any) => (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={msg.id} className={cn("flex w-full gap-4", msg.role === 'user' ? "justify-end" : "justify-start")}>
               {msg.role === 'jarvis' && (
-                <div className="w-10 h-10 rounded-full bg-black dark:bg-white flex items-center justify-center shrink-0 shadow-md mt-2">
-                  <Shield className="w-5 h-5 text-white dark:text-black" />
+                <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center shrink-0 shadow-md mt-2 border border-red-500">
+                  <Shield className="w-5 h-5 text-white" />
                 </div>
               )}
               
               <div className="flex flex-col gap-2 max-w-[85%]">
-                <div className={cn("rounded-[2rem] p-6 shadow-sm", msg.role === 'user' ? "bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-100 dark:border-cyan-900/50 text-slate-800 dark:text-slate-200" : "bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-white dark:border-slate-800 text-slate-800 dark:text-slate-200")}>
+                <div className={cn("rounded-[2rem] p-6 shadow-sm", msg.role === 'user' ? "bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200" : "bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200")}>
                   
-                  {/* Render files attached to this specific user message */}
                   {msg.role === 'user' && msg.files && msg.files.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-3">
                       {msg.files.map((fileName: string, idx: number) => (
-                        <div key={idx} className="flex items-center gap-1.5 bg-cyan-100/50 dark:bg-cyan-900/30 text-cyan-800 dark:text-cyan-300 px-2.5 py-1 rounded-md text-xs font-semibold border border-cyan-200/50 dark:border-cyan-800/50">
+                        <div key={idx} className="flex items-center gap-1.5 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-2.5 py-1 rounded-md text-xs font-bold border border-red-200 dark:border-red-800/50">
                           <Database className="w-3 h-3" /> {fileName}
                         </div>
                       ))}
@@ -211,21 +207,21 @@ export default function AnalysisView({ state, setState }: any) {
                   {msg.role === 'user' ? (
                     <p className="text-sm whitespace-pre-wrap font-medium">{msg.content}</p>
                   ) : (
-                    <div className="prose prose-sm dark:prose-invert max-w-none prose-cyan">
+                    <div className="prose prose-sm dark:prose-invert max-w-none prose-a:text-red-600 prose-headings:text-black dark:prose-headings:text-white">
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
                     </div>
                   )}
                 </div>
                 {msg.role === 'jarvis' && msg.content.includes("Your PDF is ready") && (
-                  <button onClick={() => handleFinalizeReport(msg.content, msg.id)} className="self-start flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors ml-4 bg-white/50 dark:bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm">
+                  <button onClick={() => handleFinalizeReport(msg.content, msg.id)} className="self-start flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-red-600 dark:hover:text-red-500 transition-colors ml-4 bg-white/80 dark:bg-slate-800/80 px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm">
                     <Download className="w-3 h-3" /> Exfiltrate Intel Payload
                   </button>
                 )}
               </div>
 
               {msg.role === 'user' && (
-                <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center shrink-0 border-2 border-white dark:border-slate-700 shadow-sm mt-2">
-                  <User className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                <div className="w-10 h-10 rounded-full bg-black dark:bg-slate-800 flex items-center justify-center shrink-0 border-2 border-slate-800 dark:border-slate-700 shadow-sm mt-2">
+                  <User className="w-5 h-5 text-white dark:text-slate-300" />
                 </div>
               )}
             </motion.div>
@@ -234,12 +230,12 @@ export default function AnalysisView({ state, setState }: any) {
 
         {isExecuting && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex w-full gap-4 justify-start">
-            <div className="w-10 h-10 rounded-full bg-black dark:bg-white flex items-center justify-center shrink-0 shadow-md mt-2">
-              <Loader2 className="w-5 h-5 text-cyan-400 dark:text-cyan-600 animate-spin" />
+            <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center shrink-0 shadow-md mt-2 border border-red-500">
+              <Loader2 className="w-5 h-5 text-white animate-spin" />
             </div>
-            <div className="rounded-[2rem] p-5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border border-white dark:border-slate-800 flex items-center gap-3">
-               <span className="text-sm font-mono text-cyan-600 dark:text-cyan-400">{loadingPhrases[phraseIndex]}</span>
-               <span className="flex gap-1"><span className="animate-bounce">.</span><span className="animate-bounce delay-75">.</span><span className="animate-bounce delay-150">.</span></span>
+            <div className="rounded-[2rem] p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 flex items-center gap-3">
+               <span className="text-sm font-mono text-red-600 dark:text-red-500 font-bold">{loadingPhrases[phraseIndex]}</span>
+               <span className="flex gap-1"><span className="animate-bounce text-red-600">.</span><span className="animate-bounce delay-75 text-red-600">.</span><span className="animate-bounce delay-150 text-red-600">.</span></span>
             </div>
           </motion.div>
         )}
@@ -250,34 +246,33 @@ export default function AnalysisView({ state, setState }: any) {
       <div className="w-full shrink-0 flex flex-col gap-2 relative z-20">
         <div className="flex justify-between items-end px-2">
           
-          {/* Files sitting in the staging area (pre-execution) */}
           {selectedFiles.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {selectedFiles.map((file: File, idx: number) => (
-                <div key={idx} className="flex items-center gap-2 bg-cyan-100 dark:bg-cyan-900/40 text-cyan-800 dark:text-cyan-300 px-3 py-1.5 rounded-full text-xs font-semibold border border-cyan-200 dark:border-cyan-800 shadow-sm">
+                <div key={idx} className="flex items-center gap-2 bg-red-50 dark:bg-red-900/40 text-red-700 dark:text-red-300 px-3 py-1.5 rounded-full text-xs font-bold border border-red-200 dark:border-red-800 shadow-sm">
                   <Database className="w-3 h-3" /> {file.name}
-                  <button onClick={() => removeFile(idx)} className="hover:text-red-500 transition-colors"><X className="w-3 h-3"/></button>
+                  <button onClick={() => removeFile(idx)} className="hover:text-black dark:hover:text-white transition-colors"><X className="w-3 h-3"/></button>
                 </div>
               ))}
             </div>
           ) : <div />}
 
-          {/* REPORT TYPE TOGGLE: Hidden unless files are actively staged */}
           {selectedFiles.length > 0 && (
             <div className="flex bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-1 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
-               <button onClick={() => setReportType('executive')} className={cn("px-4 py-1.5 rounded-full text-xs font-bold transition-all", reportType === 'executive' ? "bg-black text-white dark:bg-white dark:text-black shadow-md" : "text-slate-500 hover:text-black dark:hover:text-white")}>
+               <button onClick={() => setReportType('executive')} className={cn("px-4 py-1.5 rounded-full text-xs font-bold transition-all", reportType === 'executive' ? "bg-red-600 text-white shadow-md" : "text-slate-500 hover:text-black dark:hover:text-white")}>
                  Executive Intel
                </button>
-               <button onClick={() => setReportType('investor')} className={cn("px-4 py-1.5 rounded-full text-xs font-bold transition-all", reportType === 'investor' ? "bg-black text-white dark:bg-white dark:text-black shadow-md" : "text-slate-500 hover:text-black dark:hover:text-white")}>
+               <button onClick={() => setReportType('investor')} className={cn("px-4 py-1.5 rounded-full text-xs font-bold transition-all", reportType === 'investor' ? "bg-red-600 text-white shadow-md" : "text-slate-500 hover:text-black dark:hover:text-white")}>
                  Investor Brief
                </button>
             </div>
           )}
         </div>
 
-        <div className={cn("relative rounded-[2rem] p-[2px] transition-all duration-500 bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl shadow-lg border border-white dark:border-slate-800", isExecuting ? "shadow-[0_0_20px_rgba(6,182,212,0.3)] ring-1 ring-cyan-500/50" : "")}>
-          <div className="flex items-end gap-3 p-2">
-            <button onClick={handleUploadClick} className="p-3 text-slate-400 hover:text-black dark:hover:text-white transition-colors rounded-full hover:bg-slate-200 dark:bg-slate-900 shrink-0">
+        {/* The Red/Black Glowing Execution Border */}
+        <div className={cn("relative rounded-[2rem] p-[2px] transition-all duration-500 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-sm border border-slate-200 dark:border-slate-800", isExecuting ? "bg-gradient-to-r from-red-600 via-black to-red-600 dark:via-white bg-[length:200%_auto] animate-[pulse_2s_ease-in-out_infinite] border-transparent" : "")}>
+          <div className="flex items-end gap-3 p-2 bg-white dark:bg-slate-950 rounded-[calc(2rem-2px)]">
+            <button onClick={handleUploadClick} className="p-3 text-slate-400 hover:text-red-600 transition-colors rounded-full hover:bg-red-50 dark:hover:bg-red-900/30 shrink-0">
               <Plus className="w-5 h-5" />
             </button>
             <textarea 
@@ -285,10 +280,10 @@ export default function AnalysisView({ state, setState }: any) {
               onChange={(e) => setState({ ...state, promptText: e.target.value })}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); executeAction(); } }}
               placeholder="Message Jarvis or drop telemetry files..." 
-              className="flex-1 max-h-32 min-h-[44px] py-3 resize-none outline-none text-sm text-slate-800 dark:text-slate-200 bg-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500 custom-scrollbar" 
+              className="flex-1 max-h-32 min-h-[44px] py-3 resize-none outline-none text-sm text-slate-800 dark:text-slate-200 bg-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500 custom-scrollbar font-medium" 
               disabled={isExecuting}
             />
-            <button onClick={() => executeAction()} disabled={isExecuting} className="bg-black dark:bg-white text-white dark:text-black p-3 rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-md disabled:opacity-50 shrink-0">
+            <button onClick={() => executeAction()} disabled={isExecuting} className="bg-red-600 text-white p-3 rounded-full flex items-center justify-center hover:bg-red-700 transition-colors shadow-md disabled:opacity-50 shrink-0">
               {isExecuting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
             </button>
           </div>

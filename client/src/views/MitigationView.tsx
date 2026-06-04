@@ -17,7 +17,6 @@ export default function MitigationView() {
     
     try {
       const filesArray = Array.from(e.target.files);
-      // Calls blueprint endpoint to generate Terraform/Ansible code
       const response = await analyzeLogs('blueprint', filesArray, 'gemini', 'Generate a secure infrastructure blueprint (Terraform/Ansible) to patch vulnerabilities found in these logs.');
       
       setBlueprint(response.reportContent || "Error: Engine returned empty blueprint.");
@@ -30,56 +29,62 @@ export default function MitigationView() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full max-w-6xl mx-auto w-full pb-12 pt-4">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="flex flex-col h-full max-w-6xl mx-auto w-full pb-12 pt-4 gap-6">
       <input type="file" multiple ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
 
       {/* Header Panel */}
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800 flex justify-between items-center mb-6 shrink-0">
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-800 flex justify-between items-center shrink-0">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
-            <Server className="w-6 h-6 text-indigo-500" /> Defensive Orchestration
+          <h2 className="text-2xl font-black text-black dark:text-white flex items-center gap-3 tracking-tight">
+            <Server className="w-6 h-6 text-red-600" /> Defensive Orchestration
           </h2>
-          <p className="text-sm text-slate-500 mt-1">Generate deployable Terraform/Ansible scripts to harden infrastructure.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">Generate deployable Terraform/Ansible scripts to harden infrastructure.</p>
         </div>
         <div className="flex gap-3">
           <button 
             onClick={() => fileInputRef.current?.click()} 
             disabled={isLoading}
-            className="bg-white dark:bg-slate-800 text-black dark:text-white border border-slate-200 dark:border-slate-700 px-6 py-3 rounded-full font-semibold text-sm flex items-center gap-2 hover:scale-105 transition-transform disabled:opacity-50 shadow-sm"
+            className="bg-white dark:bg-slate-800 text-black dark:text-white border border-slate-300 dark:border-slate-700 px-6 py-3 rounded-full font-bold text-sm flex items-center gap-2 hover:border-red-600 dark:hover:border-red-500 transition-colors disabled:opacity-50 shadow-sm"
           >
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin text-red-600" /> : <UploadCloud className="w-4 h-4 text-red-600" />}
             Upload Vuln Logs
           </button>
           {blueprint && (
-            <button className="bg-[#0ea5e9] text-white px-6 py-3 rounded-full font-bold text-sm flex items-center gap-2 hover:scale-105 transition-transform shadow-lg shadow-cyan-500/30">
-              <Play className="w-4 h-4" /> Deploy Script
-            </button>
+            <motion.button 
+              initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+              className="bg-red-600 text-white px-6 py-3 rounded-full font-bold text-sm flex items-center gap-2 hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20"
+            >
+              <Play className="w-4 h-4 fill-current" /> Deploy Blueprint
+            </motion.button>
           )}
         </div>
       </div>
 
       {/* Blueprint Editor Area */}
-      <div className="flex-1 bg-[#1E293B] rounded-[2rem] p-6 shadow-2xl border border-slate-700 overflow-hidden flex flex-col relative">
-        <div className="flex items-center gap-2 mb-4 px-2 pb-4 border-b border-slate-600/50 text-slate-400">
-           <TerminalSquare className="w-5 h-5 text-emerald-400" />
-           <span className="font-mono text-xs uppercase tracking-widest">Main.tf / Playbook.yml</span>
+      <div className="flex-1 bg-[#0A0A0A] dark:bg-black rounded-[2rem] p-6 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col relative group transition-colors hover:border-red-900/50">
+        
+        {/* Terminal Header */}
+        <div className="flex items-center gap-2 mb-4 px-2 pb-4 border-b border-slate-800 text-slate-400">
+           <TerminalSquare className="w-5 h-5 text-red-600" />
+           <span className="font-mono text-xs font-bold text-white tracking-widest">Main.tf / Playbook.yml</span>
         </div>
 
+        {/* Code Output Area */}
         <div className="flex-1 overflow-y-auto custom-scrollbar font-mono text-sm px-2 text-slate-300">
           <AnimatePresence mode="wait">
             {isLoading ? (
-              <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center h-full text-emerald-500">
+              <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center h-full text-red-600">
                 <Code2 className="w-12 h-12 mb-4 animate-pulse" />
-                <p className="tracking-widest">COMPILING DEFENSIVE BLUEPRINT...</p>
+                <p className="tracking-widest font-bold">COMPILING DEFENSIVE BLUEPRINT...</p>
               </motion.div>
             ) : !blueprint ? (
-              <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center h-full opacity-30 text-center">
-                <Shield className="w-16 h-16 mb-4" />
-                <h3 className="text-lg">Infrastructure Secure</h3>
-                <p className="text-xs max-w-xs mt-2">Upload vulnerability profiles or penetration logs to automatically generate IaC patching scripts.</p>
+              <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center h-full opacity-40 text-center">
+                <Shield className="w-16 h-16 mb-4 text-white" />
+                <h3 className="text-lg font-bold text-white">Infrastructure Secure</h3>
+                <p className="text-xs max-w-xs mt-2 text-slate-400">Upload vulnerability profiles or penetration logs to automatically generate IaC patching scripts.</p>
               </motion.div>
             ) : (
-              <motion.div key="blueprint" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="prose prose-invert prose-emerald max-w-none prose-pre:bg-black/40 prose-pre:border prose-pre:border-slate-700/50 prose-pre:rounded-xl">
+              <motion.div key="blueprint" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="prose prose-invert max-w-none prose-a:text-red-500 prose-headings:text-white prose-pre:bg-[#111111] prose-pre:border prose-pre:border-slate-800 prose-pre:rounded-xl">
                 <ReactMarkdown>{blueprint}</ReactMarkdown>
               </motion.div>
             )}
