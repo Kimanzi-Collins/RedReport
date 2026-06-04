@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +21,8 @@
     "multer": "^2.1.1"
   },
   "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
     "nodemon": "^3.1.14"
   }
 }
