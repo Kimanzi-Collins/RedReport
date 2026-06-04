@@ -7,22 +7,27 @@ const generateReport = async (req, res) => {
         const reportType = req.body.reportType || 'executive'; // 'executive' or 'investor'
         let combinedLogs = '';
 
+        // Safely check if files exist and extract text
         if (req.files && req.files.length > 0) {
             req.files.forEach(file => {
                 combinedLogs += `\n--- File: ${file.originalname} ---\n${file.buffer.toString('utf-8')}\n`;
             });
         }
 
-        // --- DYNAMIC PERSONA ROUTING ---
-        let reportTemplate = "";
-        
-        if (reportType === 'investor') {
-            reportTemplate = `
+        let systemPrompt = "";
+
+        // --- CONDITIONAL PERSONA ROUTING ---
+        if (combinedLogs) {
+            // SCENARIO 1: FILES UPLOADED -> FORCE STRICT REPORT TEMPLATE
+            let reportTemplate = "";
+            
+            if (reportType === 'investor') {
+                reportTemplate = `
         # 📈 Cyber Risk & Financial Impact Report
         > **Status:** [CRITICAL / HIGH / MODERATE] | **Risk Exposure:** [Financial/Reputational]
 
         ## 1. Investor Briefing
-        [Write a concise, high-level paragraph explaining the security event purely in terms of business impact, avoiding deep technical jargon like 'buffer overflow' or 'reverse shell'. Use terms like 'unauthorized access' or 'data exposure'.]
+        [Write a concise, high-level paragraph explaining the security event purely in terms of business impact. Avoid deep technical jargon.]
 
         ## 2. Liability & Compliance Exposure
         | Risk Category | Exposure Level | Potential Impact |
@@ -37,16 +42,15 @@ const generateReport = async (req, res) => {
         3. 🛡️ **Containment:** [Action taken to stop the bleeding]
 
         ## 4. Strategic Mitigation & ROI
-        <div style="margin: 15px 0; padding: 10px; background-color: #F3F4F6; border-left: 4px solid #0EA5E9;">
+        <div style="margin: 15px 0; padding: 10px; background-color: #F3F4F6; border-left: 4px solid #DC2626;">
            <strong>Recommended CAPEX/OPEX Security Investment:</strong>
            <div style="width: 100%; background-color: #E5E7EB; border-radius: 5px; margin-top: 5px;">
-              <div style="width: 75%; background-color: #0EA5E9; height: 10px; border-radius: 5px;"></div>
+              <div style="width: 75%; background-color: #DC2626; height: 10px; border-radius: 5px;"></div>
            </div>
            <p style="margin-top:8px; font-size:12px; color:#4B5563;">Implementation of Zero-Trust Architecture required to protect future shareholder value.</p>
         </div>`;
-        } else {
-            // Standard Executive Template
-            reportTemplate = `
+            } else {
+                reportTemplate = `
         # 🛡️ Threat Intelligence Summary
         > **Status:** [CRITICAL / HIGH / MEDIUM / LOW] | **Primary Vector:** [Short name]
 
@@ -78,17 +82,27 @@ const generateReport = async (req, res) => {
         ### 🚨 Immediate Actions
         * [Action 1]
         * [Action 2]`;
+            }
+
+            systemPrompt = `You are Jarvis, an elite Cyber Ninja Assistant. 
+            CRITICAL OUTPUT DIRECTIVES:
+            1. Start with a brief, conversational 2-3 sentence summary addressing Collins directly about the uploaded logs.
+            2. On a new line, explicitly state: "**Your PDF is ready Sir.**"
+            3. Below that, provide the highly-visual Markdown report matching this EXACT template:
+            ${reportTemplate}
+            
+            Do not use Mermaid.js. Use inline HTML for visual bars.`;
+
+        } else {
+            // SCENARIO 2: NO FILES -> PURE CONVERSATIONAL MENTORSHIP
+            systemPrompt = `You are Jarvis, an elite Cyber Ninja Assistant and digital forensics expert. 
+            You assist Collins with threat intelligence, penetration testing guidance, defensive infrastructure, and cybersecurity mentorship. 
+            Keep your tone sharp, highly analytical, and slightly futuristic. 
+            
+            CRITICAL: The user has NOT uploaded any telemetry logs. Do NOT generate a threat intelligence report. Answer their query directly, conversationally, and helpfully. Use standard Markdown for readability.`;
         }
 
-        const systemPrompt = `You are Jarvis, an elite Cyber Ninja Assistant. 
-        CRITICAL OUTPUT DIRECTIVES:
-        1. Start with a brief, conversational 2-3 sentence summary addressing Collins directly.
-        2. On a new line, explicitly state: "**Your PDF is ready Sir.**"
-        3. Below that, provide the highly-visual Markdown report matching this EXACT template:
-        ${reportTemplate}
-        
-        Do not use Mermaid.js. Use inline HTML for visual bars as requested in the template.`;
-
+        // Construct final prompt
         const userPrompt = combinedLogs 
             ? `Here are the telemetry logs to analyze:\n${combinedLogs}\n\nUser Query: ${userText}` 
             : userText;
