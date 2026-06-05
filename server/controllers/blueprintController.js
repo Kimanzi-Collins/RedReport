@@ -1,48 +1,40 @@
-// server/controllers/blueprintController.js
 const { generateWithFailover } = require('../services/llmService');
 
 const generateBlueprint = async (req, res) => {
     try {
-        if (!req.files || req.files.length === 0) {
-            return res.status(400).json({ error: 'No data files provided for defensive orchestration.' });
+        const preferredProvider = req.body.provider || 'gemini';
+        let combinedLogs = '';
+
+        // SPEED OPTIMIZATION 1: Payload Truncation
+        // We slice the buffer to 15,000 characters. The LLM only needs the critical 
+        // vulnerability signatures to generate a patch, not the entire 50MB haystack.
+        if (req.files && req.files.length > 0) {
+            req.files.forEach(file => {
+                const rawText = file.buffer.toString('utf-8');
+                combinedLogs += `\n--- File: ${file.originalname} ---\n${rawText.substring(0, 15000)}\n`;
+            });
         }
 
-        const preferredProvider = req.body.provider || 'gemini';
+        const systemPrompt = `You are Jarvis, an elite Infrastructure as Code (IaC) and DevSecOps expert. 
+        Your task is to read the provided vulnerability logs and generate a strict, deployable defensive blueprint to patch the vulnerabilities.
+        
+        CRITICAL DIRECTIVES:
+        1. Output ONLY valid Markdown containing code blocks. Do NOT include conversational greetings.
+        2. First, provide a Terraform configuration (\`main.tf\`) for network/firewall rules to block the threat vectors.
+        3. Second, provide an Ansible playbook (\`patch.yml\`) for server-level remediations and OS patching.`;
 
-        let combinedLogs = '';
-        req.files.forEach(file => {
-            combinedLogs += `\n--- File: ${file.originalname} ---\n${file.buffer.toString('utf-8')}\n`;
-        });
+        const userPrompt = combinedLogs 
+            ? `Generate mitigation scripts for these logs:\n${combinedLogs}` 
+            : `Generate a baseline secure infrastructure blueprint for a standard web server environment.`;
 
-        console.log(`Generating hardening blueprint with preferred provider: ${preferredProvider}`);
-
-        const systemPrompt = `You are an elite DevSecOps Engineer and Secure Infrastructure Architect. Analyze the technical breaches shown in the logs and generate concrete, production-grade defensive orchestration files.
-
-        Your output must be a well-structured Markdown document containing structural engineering directives. Organize it exactly as follows:
-
-        # Automated Hardening Blueprint
-
-        ## 1. Network Perimeter Rules
-        Provide the exact shell/firewall commands required to immediately drop malicious traffic or close unauthorized entry points identified in the logs (e.g., iptables, UFW, or AWS Security Group configurations).
-
-        ## 2. Host Hardening Configurations
-        Provide explicit config file modifications to block the exploit path. This must include code blocks showing the exact lines to change (e.g., /etc/ssh/sshd_config parameters, sysctl.conf kernel hardening, or Apache/Nginx site configs).
-
-        ## 3. Automation Playbook
-        Provide a complete, syntax-valid Ansible Playbook or Terraform snippet that automates the deployment of these specific remediation tasks. Ensure all variables are clearly commented.`;
-
-        const userPrompt = `Generate infrastructure remediation scripts based on these logs:\n${combinedLogs}`;
-
-        const blueprintContent = await generateWithFailover(systemPrompt, userPrompt, preferredProvider);
-
-        res.status(200).json({
-            success: true,
-            blueprintContent: blueprintContent
-        });
+        const reportContent = await generateWithFailover(systemPrompt, userPrompt, preferredProvider);
+        
+        // Return exactly what the MitigationView.tsx is looking for
+        res.status(200).json({ success: true, reportContent: reportContent });
 
     } catch (error) {
-        console.error("Defensive blueprint failure:", error);
-        res.status(500).json({ error: 'Failed to construct engineering blueprints', details: error.message });
+        console.error("Blueprint generation failure:", error);
+        res.status(500).json({ error: 'Failed to generate blueprint', details: error.message });
     }
 };
 
