@@ -23,6 +23,10 @@ export const analyzeLogs = async (
     return response.data;
   } catch (error) {
     console.error(`Error communicating with ${endpoint} engine:`, error);
+    if (axios.isAxiosError(error)) {
+      const details = error.response?.data?.details || error.response?.data?.error || error.message;
+      throw new Error(details);
+    }
     throw error;
   }
 };

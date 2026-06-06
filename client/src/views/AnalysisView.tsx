@@ -113,7 +113,8 @@ export default function AnalysisView({ state, setState }: any) {
 
       setState((prev: any) => ({ ...prev, chatHistory: [...prev.chatHistory, jarvisMessage], isExecuting: false }));
     } catch (error) {
-      setState((prev: any) => ({ ...prev, isExecuting: false, chatHistory: [...prev.chatHistory, { id: Date.now().toString(), role: 'jarvis', content: "⚠️ **System Error:** Connection severed." }] }));
+      const message = error instanceof Error ? error.message : 'Connection severed.';
+      setState((prev: any) => ({ ...prev, isExecuting: false, chatHistory: [...prev.chatHistory, { id: Date.now().toString(), role: 'jarvis', content: `**System Error:** ${message}` }] }));
     }
   };
 
