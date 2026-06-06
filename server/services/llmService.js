@@ -99,7 +99,8 @@ async function generateWithFailover(systemPrompt, userPrompt, preferredProvider 
         }
     }
 
-    throw new Error(`Critical System Failure: All LLM intelligence engines are offline. ${errors.join(' | ')}`);
+    console.error("All LLM intelligence engines failed:", errors.join(' | '));
+    throw new Error("AI engine not functional. Connection severed.");
 }
 
 module.exports = { generateWithFailover };
