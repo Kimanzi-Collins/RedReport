@@ -180,6 +180,9 @@ export default function App() {
              {activeView === 'Mitigation' && <MitigationView key="mitigation" />}
              {activeView === 'Reports' && <ReportsView key="reports" />}
            </AnimatePresence>
+           <footer className="mt-8 pb-2 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+             Copyright &copy; {new Date().getFullYear()} Collins Mwandikwa. All rights reserved.
+           </footer>
         </div>
       </main>
     </div>

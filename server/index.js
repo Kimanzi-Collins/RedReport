@@ -25,8 +25,12 @@ app.post('/api/timeline', upload.array('files'), analyzeTimeline);
 app.post('/api/mitre', upload.array('files'), mapMitreAttack);
 app.post('/api/blueprint', upload.array('files'), generateBlueprint);
 
-// Boot sequence
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`RedReport Core active on port ${PORT}`);
-});
+if (require.main === module) {
+    // Boot sequence
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+        console.log(`RedReport Core active on port ${PORT}`);
+    });
+}
+
+module.exports = app;

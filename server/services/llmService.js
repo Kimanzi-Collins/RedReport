@@ -1,5 +1,6 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const Anthropic = require('@anthropic-ai/sdk');
+const AnthropicSdk = require('@anthropic-ai/sdk');
+const Anthropic = AnthropicSdk.Anthropic || AnthropicSdk.default || AnthropicSdk;
 
 // Initialize existing SDKs
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
