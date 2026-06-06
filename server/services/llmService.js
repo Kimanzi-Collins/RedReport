@@ -25,8 +25,7 @@ async function callNvidia(systemPrompt, userPrompt) {
     });
 
     if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Nvidia API Error [${response.status}]: ${errorData}`);
+        throw new Error(`HTTP_${response.status}`);
     }
 
     const data = await response.json();
@@ -65,18 +64,29 @@ const providers = {
     claude: callClaude,
 };
 
-function getProviderOrder(preferredProvider = 'gemini') {
+function getProviderOrder(preferredProvider = 'nvidia') {
     const normalized = preferredProvider.toLowerCase();
     return [
         normalized,
-        'gemini',
-        'claude',
         'nvidia',
+        'claude',
+        'gemini',
     ].filter((provider, index, order) => providers[provider] && order.indexOf(provider) === index);
 }
 
+function getErrorCode(error) {
+    const message = error?.message || 'UNKNOWN_ERROR';
+    const httpMatch = message.match(/\b(?:HTTP_|status[":\s]+|Error \[)(\d{3})\b/i);
+    if (httpMatch) return `HTTP_${httpMatch[1]}`;
+    if (message.includes('quota') || message.includes('Too Many Requests')) return 'RATE_LIMIT';
+    if (message.includes('credit balance')) return 'INSUFFICIENT_CREDITS';
+    if (message.includes('API key') || message.includes('api_key')) return 'AUTH_OR_KEY_ERROR';
+    if (message.includes('missing from environment variables')) return 'MISSING_ENV';
+    return error?.name || 'ENGINE_ERROR';
+}
+
 // Master Routing Function
-async function generateWithFailover(systemPrompt, userPrompt, preferredProvider = 'gemini') {
+async function generateWithFailover(systemPrompt, userPrompt, preferredProvider = 'nvidia') {
     // Demo Mode Safety Valve
     if (process.env.USE_DEMO_MODE === 'true') {
         console.log("DEMO MODE ACTIVE: Returning simulated response...");
@@ -94,8 +104,9 @@ async function generateWithFailover(systemPrompt, userPrompt, preferredProvider 
             console.log(`Attempting ${provider} engine...`);
             return await providers[provider](systemPrompt, userPrompt);
         } catch (error) {
-            console.error(`${provider} engine failed:`, error.message);
-            errors.push(`${provider}: ${error.message}`);
+            const code = getErrorCode(error);
+            console.error(`${provider} engine failed: ${code}`);
+            errors.push(`${provider}:${code}`);
         }
     }
 

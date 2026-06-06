@@ -103,7 +103,7 @@ export default function AnalysisView({ state, setState }: any) {
     }));
 
     try {
-      const data = await analyzeLogs('report', filesToSend, 'gemini', enrichedPrompt, reportType);
+      const data = await analyzeLogs('report', filesToSend, 'nvidia', enrichedPrompt, reportType);
       const rawContent = data.reportContent || JSON.stringify(data.data, null, 2);
       const jarvisMessage = { id: (Date.now() + 1).toString(), role: 'jarvis', content: rawContent };
 

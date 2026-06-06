@@ -5,7 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
 export const analyzeLogs = async (
   endpoint: 'report' | 'timeline' | 'mitre' | 'blueprint',
   files: File[],
-  provider: 'gemini' | 'claude',
+  provider: 'nvidia' | 'claude' | 'gemini',
   prompt?: string,
   reportType: 'executive' | 'investor' = 'executive'
 ) => {
