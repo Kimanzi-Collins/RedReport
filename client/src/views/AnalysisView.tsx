@@ -6,7 +6,7 @@ import { twMerge } from 'tailwind-merge';
 import ReactMarkdown from 'react-markdown';
 import html2pdf from 'html2pdf.js';
 import { marked } from 'marked';
-import { analyzeLogs, analyzeLogsStream } from '../services/api';
+import { analyzeLogsStream } from '../services/api';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

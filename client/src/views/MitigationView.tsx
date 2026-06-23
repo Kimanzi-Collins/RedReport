@@ -4,16 +4,14 @@ import { Code2, Server, UploadCloud, Loader2, Play, Shield, TerminalSquare } fro
 import ReactMarkdown from 'react-markdown';
 import { analyzeLogsStream } from '../services/api';
 
-export default function MitigationView() {
-  const [blueprint, setBlueprint] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+export default function MitigationView({ state, setState }: any) {
+  const { blueprint, isLoading } = state;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     
-    setIsLoading(true);
-    setBlueprint('');
+    setState({ ...state, isLoading: true, blueprint: '' });
     
     try {
       const filesArray = Array.from(e.target.files);
@@ -22,14 +20,14 @@ export default function MitigationView() {
       let fullContent = '';
       for await (const chunk of stream) {
         fullContent += chunk;
-        setBlueprint(fullContent);
+        setState((prev: any) => ({ ...prev, blueprint: fullContent }));
       }
     } catch (error) {
       console.error("Blueprint generation failed:", error);
       alert("Failed to generate mitigation blueprint.");
-      setBlueprint("Error: Connection severed.");
+      setState((prev: any) => ({ ...prev, blueprint: "Error: Connection severed." }));
     } finally {
-      setIsLoading(false);
+      setState((prev: any) => ({ ...prev, isLoading: false }));
     }
   };
 

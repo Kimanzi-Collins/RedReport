@@ -35,8 +35,21 @@ export default function App() {
     chatHistory: [] as { id: string; role: 'user' | 'jarvis'; content: string; files?: string[] }[]
   });
 
+  const [mitigationState, setMitigationState] = useState({
+    blueprint: null as string | null,
+    isLoading: false
+  });
+
+  const [telemetryState, setTelemetryState] = useState({
+    events: [] as any[],
+    rawLogs: '',
+    isLoading: false
+  });
+
   const handleNewSession = () => {
     setAnalysisState({ selectedFiles: [], promptText: '', isExecuting: false, chatHistory: [] });
+    setMitigationState({ blueprint: null, isLoading: false });
+    setTelemetryState({ events: [], rawLogs: '', isLoading: false });
     setActiveView('Analysis');
   };
 
@@ -176,8 +189,8 @@ export default function App() {
            <AnimatePresence mode="wait">
              {activeView === 'Analysis' && <AnalysisView key="analysis" state={analysisState} setState={setAnalysisState} />}
              {activeView === 'Dashboards' && <DashboardView key="dashboard" />}
-             {activeView === 'Telemetry' && <TelemetryView key="telemetry" />}
-             {activeView === 'Mitigation' && <MitigationView key="mitigation" />}
+             {activeView === 'Telemetry' && <TelemetryView key="telemetry" state={telemetryState} setState={setTelemetryState} />}
+             {activeView === 'Mitigation' && <MitigationView key="mitigation" state={mitigationState} setState={setMitigationState} />}
              {activeView === 'Reports' && <ReportsView key="reports" />}
            </AnimatePresence>
            <footer className="mt-8 pb-2 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">

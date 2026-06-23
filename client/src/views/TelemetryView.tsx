@@ -7,24 +7,22 @@ import { analyzeLogsStream } from '../services/api';
 
 function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
 
-export default function TelemetryView() {
-  const [events, setEvents] = useState<any[]>([]);
-  const [rawLogs, setRawLogs] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
+export default function TelemetryView({ state, setState }: any) {
+  const { events, rawLogs, isLoading } = state;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    setIsLoading(true);
-    setEvents([]);
-    setRawLogs('');
+    setState({ ...state, isLoading: true, events: [], rawLogs: '' });
+    
     const filesArray = Array.from(e.target.files);
     let combinedText = '';
     for (const file of filesArray) {
       const text = await file.text();
       combinedText += `\n--- Reading ${file.name} ---\n${text}\n`;
     }
-    setRawLogs(combinedText);
+    setState((prev: any) => ({ ...prev, rawLogs: combinedText }));
+    
     try {
       const stream = analyzeLogsStream('timeline', filesArray, 'nvidia', 'Extract chronological timeline');
       let fullContent = '';
@@ -33,12 +31,15 @@ export default function TelemetryView() {
       }
       const cleanJsonString = fullContent.replace(/```json|```/g, '').trim();
       const timelineData = JSON.parse(cleanJsonString);
-      if (Array.isArray(timelineData)) setEvents(timelineData);
-      else alert("Engine failed to construct a valid chronological timeline.");
+      if (Array.isArray(timelineData)) {
+         setState((prev: any) => ({ ...prev, events: timelineData }));
+      } else {
+         alert("Engine failed to construct a valid chronological timeline.");
+      }
     } catch (error) {
-      setRawLogs(prev => prev + "\n\n[ERROR] Connection to intelligence engine severed.");
+      setState((prev: any) => ({ ...prev, rawLogs: prev.rawLogs + "\n\n[ERROR] Connection to intelligence engine severed." }));
     } finally {
-      setIsLoading(false);
+      setState((prev: any) => ({ ...prev, isLoading: false }));
     }
   };
 
