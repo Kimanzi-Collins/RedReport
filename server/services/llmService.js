@@ -19,7 +19,7 @@ async function callNvidia(systemPrompt, userPrompt) {
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
             ],
-            temperature: 0.2, // Low temp for highly analytical, factual output
+            temperature: 0.2,
             max_tokens: 2048
         })
     });

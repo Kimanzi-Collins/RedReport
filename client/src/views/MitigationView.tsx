@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Code2, Server, UploadCloud, Loader2, Play, Shield, TerminalSquare } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { analyzeLogs } from '../services/api';
+import { analyzeLogsStream } from '../services/api';
 
 export default function MitigationView() {
   const [blueprint, setBlueprint] = useState<string | null>(null);
@@ -13,16 +13,21 @@ export default function MitigationView() {
     if (!e.target.files || e.target.files.length === 0) return;
     
     setIsLoading(true);
-    setBlueprint(null);
+    setBlueprint('');
     
     try {
       const filesArray = Array.from(e.target.files);
-      const response = await analyzeLogs('blueprint', filesArray, 'gemini', 'Generate a secure infrastructure blueprint (Terraform/Ansible) to patch vulnerabilities found in these logs.');
+      const stream = analyzeLogsStream('blueprint', filesArray, 'nvidia', 'Generate a secure infrastructure blueprint (Terraform/Ansible) to patch vulnerabilities found in these logs.');
       
-      setBlueprint(response.reportContent || "Error: Engine returned empty blueprint.");
+      let fullContent = '';
+      for await (const chunk of stream) {
+        fullContent += chunk;
+        setBlueprint(fullContent);
+      }
     } catch (error) {
       console.error("Blueprint generation failed:", error);
       alert("Failed to generate mitigation blueprint.");
+      setBlueprint("Error: Connection severed.");
     } finally {
       setIsLoading(false);
     }

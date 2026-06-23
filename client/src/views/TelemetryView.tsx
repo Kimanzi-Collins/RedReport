@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { UploadCloud, Clock, ShieldCheck, Activity, Target, Loader2, TerminalSquare } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { analyzeLogs } from '../services/api';
+import { analyzeLogsStream } from '../services/api';
 
 function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
 
@@ -26,8 +26,14 @@ export default function TelemetryView() {
     }
     setRawLogs(combinedText);
     try {
-      const response = await analyzeLogs('timeline', filesArray, 'gemini', 'Extract chronological timeline');
-      if (response.data && Array.isArray(response.data)) setEvents(response.data);
+      const stream = analyzeLogsStream('timeline', filesArray, 'nvidia', 'Extract chronological timeline');
+      let fullContent = '';
+      for await (const chunk of stream) {
+        fullContent += chunk;
+      }
+      const cleanJsonString = fullContent.replace(/```json|```/g, '').trim();
+      const timelineData = JSON.parse(cleanJsonString);
+      if (Array.isArray(timelineData)) setEvents(timelineData);
       else alert("Engine failed to construct a valid chronological timeline.");
     } catch (error) {
       setRawLogs(prev => prev + "\n\n[ERROR] Connection to intelligence engine severed.");

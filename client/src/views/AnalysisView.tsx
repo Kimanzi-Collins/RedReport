@@ -6,7 +6,7 @@ import { twMerge } from 'tailwind-merge';
 import ReactMarkdown from 'react-markdown';
 import html2pdf from 'html2pdf.js';
 import { marked } from 'marked';
-import { analyzeLogs } from '../services/api';
+import { analyzeLogs, analyzeLogsStream } from '../services/api';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -103,15 +103,34 @@ export default function AnalysisView({ state, setState }: any) {
     }));
 
     try {
-      const data = await analyzeLogs('report', filesToSend, 'nvidia', enrichedPrompt, reportType);
-      const rawContent = data.reportContent || JSON.stringify(data.data, null, 2);
-      const jarvisMessage = { id: (Date.now() + 1).toString(), role: 'jarvis', content: rawContent };
+      const stream = analyzeLogsStream('report', filesToSend, 'nvidia', enrichedPrompt, reportType);
+      const jarvisMessageId = (Date.now() + 1).toString();
+      
+      const initialMessage = { id: jarvisMessageId, role: 'jarvis', content: '' };
+      setState((prev: any) => ({ 
+        ...prev, 
+        chatHistory: [...prev.chatHistory, initialMessage],
+        isExecuting: true 
+      }));
+
+      let fullContent = '';
+      for await (const chunk of stream) {
+        fullContent += chunk;
+        setState((prev: any) => {
+          const newHistory = [...prev.chatHistory];
+          const lastMsgIndex = newHistory.findIndex(m => m.id === jarvisMessageId);
+          if (lastMsgIndex !== -1) {
+            newHistory[lastMsgIndex] = { ...newHistory[lastMsgIndex], content: fullContent };
+          }
+          return { ...prev, chatHistory: newHistory, isExecuting: false };
+        });
+      }
 
       const existingReports = JSON.parse(localStorage.getItem('redReport_reports') || '[]');
-      existingReports.push({ id: jarvisMessage.id, date: new Date().toISOString(), title: `Threat Intel: ${new Date().toLocaleTimeString()}`, content: jarvisMessage.content });
+      existingReports.push({ id: jarvisMessageId, date: new Date().toISOString(), title: `Threat Intel: ${new Date().toLocaleTimeString()}`, content: fullContent });
       localStorage.setItem('redReport_reports', JSON.stringify(existingReports));
 
-      setState((prev: any) => ({ ...prev, chatHistory: [...prev.chatHistory, jarvisMessage], isExecuting: false }));
+      setState((prev: any) => ({ ...prev, isExecuting: false }));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Connection severed.';
       setState((prev: any) => ({ ...prev, isExecuting: false, chatHistory: [...prev.chatHistory, { id: Date.now().toString(), role: 'jarvis', content: `**System Error:** ${message}` }] }));
@@ -133,38 +152,182 @@ export default function AnalysisView({ state, setState }: any) {
     const printElement = document.createElement('div');
     printElement.innerHTML = `
       <style>
-        .pdf-content h1, .pdf-content h2, .pdf-content h3 { color: #111827; margin-top: 24px; margin-bottom: 12px; }
-        .pdf-content h1 { border-bottom: 2px solid #E5E7EB; padding-bottom: 8px; font-size: 24px; }
-        .pdf-content h2 { font-size: 18px; color: #DC2626; }
-        .pdf-content p { margin-bottom: 16px; }
-        .pdf-content table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
-        .pdf-content th, .pdf-content td { border: 1px solid #E5E7EB; padding: 12px; text-align: left; }
-        .pdf-content th { background-color: #F9FAFB; font-weight: bold; color: #374151; }
-        .pdf-content tr:nth-child(even) { background-color: #F9FAFB; }
-        .pdf-content blockquote { border-left: 4px solid #DC2626; padding: 12px 16px; color: #111827; background: #F3F4F6; margin: 20px 0; font-weight: bold;}
-        .pdf-content ul, .pdf-content ol { margin-bottom: 16px; padding-left: 24px; }
-        .pdf-content li { margin-bottom: 6px; }
-        .pdf-content code { background-color: #F3F4F6; padding: 2px 4px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #DC2626; font-weight: bold; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        .pdf-container {
+          font-family: 'Inter', -apple-system, sans-serif;
+          color: #1E293B;
+          padding: 40px 50px;
+          line-height: 1.6;
+          background-color: #FFFFFF;
+        }
+        .pdf-header {
+          border-bottom: 2px solid #E2E8F0;
+          padding-bottom: 25px;
+          margin-bottom: 35px;
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+        }
+        .pdf-logo {
+          font-size: 32px;
+          font-weight: 800;
+          letter-spacing: -1px;
+          color: #0F172A;
+          margin: 0;
+          text-transform: uppercase;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .pdf-logo span {
+          color: #B91C1C;
+        }
+        .pdf-subtitle {
+          color: #64748B;
+          margin: 6px 0 0 0;
+          font-size: 11px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 2.5px;
+        }
+        .pdf-meta {
+          text-align: right;
+          color: #475569;
+          font-size: 10px;
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+        .pdf-content h1 {
+          color: #0F172A;
+          font-size: 22px;
+          font-weight: 800;
+          border-bottom: 1px solid #CBD5E1;
+          padding-bottom: 8px;
+          margin-top: 30px;
+          margin-bottom: 16px;
+        }
+        .pdf-content h2 {
+          font-size: 16px;
+          color: #B91C1C;
+          font-weight: 600;
+          margin-top: 24px;
+          margin-bottom: 12px;
+        }
+        .pdf-content h3 {
+          font-size: 14px;
+          color: #334155;
+          font-weight: 600;
+          margin-top: 20px;
+          margin-bottom: 10px;
+        }
+        .pdf-content p {
+          margin-bottom: 16px;
+          font-size: 12px;
+          color: #334155;
+        }
+        .pdf-content table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 24px 0;
+          font-size: 11px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .pdf-content th, .pdf-content td {
+          border: 1px solid #E2E8F0;
+          padding: 12px 14px;
+          text-align: left;
+        }
+        .pdf-content th {
+          background-color: #F8FAFC;
+          font-weight: 600;
+          color: #0F172A;
+          text-transform: uppercase;
+          font-size: 10px;
+          letter-spacing: 0.5px;
+        }
+        .pdf-content tr:nth-child(even) {
+          background-color: #F8FAFC;
+        }
+        .pdf-content blockquote {
+          border-left: 3px solid #B91C1C;
+          padding: 16px 20px;
+          color: #1E293B;
+          background: #FEF2F2;
+          margin: 24px 0;
+          font-weight: 600;
+          font-size: 12px;
+          border-radius: 0 8px 8px 0;
+        }
+        .pdf-content ul, .pdf-content ol {
+          margin-bottom: 16px;
+          padding-left: 24px;
+          font-size: 12px;
+          color: #334155;
+        }
+        .pdf-content li {
+          margin-bottom: 8px;
+        }
+        .pdf-content code {
+          background-color: #F1F5F9;
+          padding: 3px 6px;
+          border-radius: 4px;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 10px;
+          color: #B91C1C;
+          font-weight: 600;
+        }
+        .pdf-footer {
+          margin-top: 50px;
+          padding-top: 20px;
+          border-top: 1px solid #E2E8F0;
+          font-size: 9px;
+          color: #94A3B8;
+          text-align: center;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          font-weight: 600;
+        }
+        .confidential-stamp {
+          position: absolute;
+          top: 45px;
+          right: 50px;
+          color: #DC2626;
+          border: 2px solid #DC2626;
+          padding: 4px 10px;
+          font-size: 10px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 2px;
+          border-radius: 4px;
+          opacity: 0.8;
+          transform: rotate(5deg);
+        }
       </style>
-      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827; padding: 40px; line-height: 1.6;">
-        <div style="border-bottom: 4px solid #DC2626; padding-bottom: 20px; margin-bottom: 30px; display: flex; align-items: flex-end; justify-content: space-between;">
+      <div class="pdf-container">
+        <div class="confidential-stamp">CONFIDENTIAL / INTERNAL ONLY</div>
+        <div class="pdf-header">
           <div>
-            <h1 style="color: #DC2626; margin: 0; font-size: 38px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">Red<span style="color: #111827;">Report</span></h1>
-            <p style="color: #6B7280; margin: 5px 0 0 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">Threat Intelligence Summary</p>
+            <h1 class="pdf-logo">Red<span>Report</span></h1>
+            <p class="pdf-subtitle">Enterprise Threat Intelligence Summary</p>
           </div>
-          <div style="text-align: right; color: #4B5563; font-size: 11px; font-weight: bold;">
-            GENERATED: ${new Date().toLocaleDateString()}<br/>
-            REF: ${messageId.slice(-6)}
+          <div class="pdf-meta">
+            DATE: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}<br/>
+            TIME: ${new Date().toLocaleTimeString('en-US')}<br/>
+            INCIDENT REF: ${messageId.slice(-8)}
           </div>
         </div>
-        <div class="pdf-content" style="font-size: 14px;">
+        <div class="pdf-content">
            ${htmlContent}
+        </div>
+        <div class="pdf-footer">
+          © ${new Date().getFullYear()} RedReport Security Ops. Strictly Confidential. Do Not Distribute.
         </div>
       </div>
     `;
 
     html2pdf().set({
-      margin: 15,
+      margin: 10,
       filename: `RedReport_Intel_${messageId}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
@@ -214,7 +377,7 @@ export default function AnalysisView({ state, setState }: any) {
              </div>
           </div>
         ) : (
-          chatHistory.map((msg: any) => (
+          chatHistory.filter((msg: any) => msg.role === 'user' || msg.content.length > 0).map((msg: any) => (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={msg.id} className={cn("flex w-full gap-4", msg.role === 'user' ? "justify-end" : "justify-start")}>
               {msg.role === 'jarvis' && (
                 <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center shrink-0 shadow-md mt-2 border border-red-500">
