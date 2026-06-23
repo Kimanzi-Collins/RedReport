@@ -2,9 +2,10 @@ const { generateWithFailover } = require('../services/llmService');
 
 const generateReport = async (req, res) => {
     try {
-        const preferredProvider = req.body.provider || 'gemini';
-        const userText = req.body.prompt || '';
-        const reportType = req.body.reportType || 'executive'; 
+        const body = req.body || {};
+        const preferredProvider = body.provider || 'gemini';
+        const userText = body.prompt || '';
+        const reportType = body.reportType || 'executive'; 
         let combinedLogs = '';
 
         if (req.files && req.files.length > 0) {

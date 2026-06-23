@@ -1,38 +1,45 @@
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UploadCloud, Clock, ShieldCheck, Activity, Target, Loader2, TerminalSquare } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { analyzeLogs } from '../services/api';
+import { analyzeLogsStream } from '../services/api';
 
 function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
 
-export default function TelemetryView() {
-  const [events, setEvents] = useState<any[]>([]);
-  const [rawLogs, setRawLogs] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
+export default function TelemetryView({ state, setState }: any) {
+  const { events, rawLogs, isLoading } = state;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    setIsLoading(true);
-    setEvents([]);
-    setRawLogs('');
+    setState({ ...state, isLoading: true, events: [], rawLogs: '' });
+    
     const filesArray = Array.from(e.target.files);
     let combinedText = '';
     for (const file of filesArray) {
       const text = await file.text();
       combinedText += `\n--- Reading ${file.name} ---\n${text}\n`;
     }
-    setRawLogs(combinedText);
+    setState((prev: any) => ({ ...prev, rawLogs: combinedText }));
+    
     try {
-      const response = await analyzeLogs('timeline', filesArray, 'gemini', 'Extract chronological timeline');
-      if (response.data && Array.isArray(response.data)) setEvents(response.data);
-      else alert("Engine failed to construct a valid chronological timeline.");
+      const stream = analyzeLogsStream('timeline', filesArray, 'nvidia', 'Extract chronological timeline');
+      let fullContent = '';
+      for await (const chunk of stream) {
+        fullContent += chunk;
+      }
+      const cleanJsonString = fullContent.replace(/```json|```/g, '').trim();
+      const timelineData = JSON.parse(cleanJsonString);
+      if (Array.isArray(timelineData)) {
+         setState((prev: any) => ({ ...prev, events: timelineData }));
+      } else {
+         alert("Engine failed to construct a valid chronological timeline.");
+      }
     } catch (error) {
-      setRawLogs(prev => prev + "\n\n[ERROR] Connection to intelligence engine severed.");
+      setState((prev: any) => ({ ...prev, rawLogs: prev.rawLogs + "\n\n[ERROR] Connection to intelligence engine severed." }));
     } finally {
-      setIsLoading(false);
+      setState((prev: any) => ({ ...prev, isLoading: false }));
     }
   };
 
@@ -103,7 +110,7 @@ export default function TelemetryView() {
         ) : (
           <div className="relative pl-6 md:pl-8 border-l-2 border-slate-200 dark:border-slate-700 space-y-10 py-4">
             <AnimatePresence>
-              {events.map((evt, idx) => (
+              {events.map((evt: any, idx: number) => (
                 <motion.div key={idx} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.1 }} className="relative">
                   <div className={cn("absolute -left-[35px] md:-left-[43px] w-5 h-5 rounded-full shadow-lg border-[3px] dark:border-slate-900", getSeverityColor(evt.severity))} />
                   <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 ml-4 hover:border-red-600 dark:hover:border-red-500 transition-colors">

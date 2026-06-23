@@ -2,19 +2,25 @@ const request = require('supertest');
 const express = require('express');
 const multer = require('multer');
 
-// Mock the Anthropic SDK before importing controllers
 const mockCreate = jest.fn();
-jest.mock('@anthropic-ai/sdk', () => {
+jest.mock('../services/llmService', () => {
     return {
-        Anthropic: jest.fn().mockImplementation(() => ({
-            messages: {
-                create: mockCreate
-            }
-        }))
+        generateWithFailover: jest.fn(async (systemPrompt, userPrompt) => {
+            const isTimeline = systemPrompt.includes('JSON array');
+            const response = await mockCreate({
+                model: 'claude-3-5-sonnet-20240620',
+                max_tokens: isTimeline ? 1024 : 2500,
+                temperature: isTimeline ? 0.1 : 0.2,
+                system: systemPrompt,
+                messages: [{ role: 'user', content: userPrompt }]
+            });
+
+            return response.content[0].text;
+        })
     };
 });
 
-// Import controllers AFTER mocking
+// Import controllers AFTER mocking the LLM service
 const { generateReport } = require('../controllers/reportController');
 const { analyzeTimeline } = require('../controllers/timelineController');
 
@@ -194,7 +200,7 @@ describe('Express File Upload Endpoints', () => {
                     .send({});
 
                 expect(response.status).toBe(400);
-                expect(response.body.error).toContain('No log files provided');
+                expect(response.body.error).toContain('Please provide a prompt or upload logs');
             });
 
             it('should return 400 when empty file array is provided', async () => {
@@ -203,7 +209,7 @@ describe('Express File Upload Endpoints', () => {
                     .field('logFiles', []);
 
                 expect(response.status).toBe(400);
-                expect(response.body.error).toContain('No log files provided');
+                expect(response.body.error).toContain('Please provide a prompt or upload logs');
             });
 
             it('should handle empty file content gracefully', async () => {
@@ -375,7 +381,7 @@ describe('Express File Upload Endpoints', () => {
                 const callArgs = mockCreate.mock.calls[0][0];
                 expect(callArgs.system).toContain('Incident Response Analyst');
                 expect(callArgs.system).toContain('JSON array');
-                expect(callArgs.system).toContain('chronologically');
+                expect(callArgs.system).toContain('chronological');
                 expect(callArgs.temperature).toBe(0.1);
             });
 

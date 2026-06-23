@@ -86,8 +86,10 @@ graph LR
 
    ```bash
    PORT=5000
+   NVIDIA_API_KEY=your_nvidia_api_key_here
    GEMINI_API_KEY=your_gemini_api_key_here
-   ANTHROPIC_API_KEY=your_claude_api_key_here
+   CLAUDE_API_KEY=your_claude_api_key_here
+   USE_DEMO_MODE=false
    ```
 
 3. Install dependencies.
@@ -113,6 +115,36 @@ graph LR
 4. Open the application.
 
    Navigate to http://localhost:5173 in your browser.
+
+## Netlify Deployment
+
+This repository includes `netlify.toml`, which builds the Vite frontend from `client/` and deploys the Express backend as a Netlify Function from `server/netlify/functions/api.js`.
+
+1. Create a new Netlify site from this repository.
+2. Leave the build settings on the repository defaults. Netlify will use:
+
+   ```bash
+   npm --prefix server ci && npm --prefix client ci && npm --prefix client run build
+   ```
+
+   The publish directory is:
+
+   ```bash
+   client/dist
+   ```
+
+3. Add these environment variables in Netlify:
+
+   ```bash
+   NVIDIA_API_KEY=your_nvidia_api_key_here
+   GEMINI_API_KEY=your_gemini_api_key_here
+   CLAUDE_API_KEY=your_claude_api_key_here
+   USE_DEMO_MODE=false
+   ```
+
+   For a demo deployment without live AI keys, set `USE_DEMO_MODE=true`.
+
+4. Deploy. Frontend requests go to `/api`, and Netlify redirects them to the serverless Express backend automatically. The catch-all redirect also sends direct page loads back to `index.html`, preventing Netlify's page-not-found error.
 
 ## Design Philosophy
 

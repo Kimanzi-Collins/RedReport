@@ -78,7 +78,7 @@ export default function DashboardView() {
                 <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} width={80} fontWeight="bold" />
                 <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
                 <Bar dataKey="count" radius={[0, 8, 8, 0]} barSize={20}>
-                  {threatDistribution.map((entry, index) => (
+                  {threatDistribution.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={index === 0 ? '#DC2626' : '#111827'} />
                   ))}
                 </Bar>

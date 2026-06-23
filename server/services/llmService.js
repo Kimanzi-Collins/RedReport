@@ -1,14 +1,11 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const Anthropic = require('@anthropic-ai/sdk');
-
-// Initialize existing SDKs
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
+const AnthropicSdk = require('@anthropic-ai/sdk');
+const Anthropic = AnthropicSdk.Anthropic || AnthropicSdk.default || AnthropicSdk;
 
 // NEW: Nvidia NIM Engine (Llama 3.1 70B)
 async function callNvidia(systemPrompt, userPrompt) {
     const apiKey = process.env.NVIDIA_API_KEY;
-    if (!apiKey) throw new Error("NVIDIA_API_KEY is missing from .env");
+    if (!apiKey) throw new Error("NVIDIA_API_KEY is missing from environment variables");
 
     const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
         method: "POST",
@@ -22,14 +19,13 @@ async function callNvidia(systemPrompt, userPrompt) {
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
             ],
-            temperature: 0.2, // Low temp for highly analytical, factual output
+            temperature: 0.2,
             max_tokens: 2048
         })
     });
 
     if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Nvidia API Error [${response.status}]: ${errorData}`);
+        throw new Error(`HTTP_${response.status}`);
     }
 
     const data = await response.json();
@@ -38,23 +34,59 @@ async function callNvidia(systemPrompt, userPrompt) {
 
 // Legacy Engines
 async function callGemini(systemPrompt, userPrompt) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("GEMINI_API_KEY is missing from environment variables");
+
+    const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
     const result = await model.generateContent(`${systemPrompt}\n\n${userPrompt}`);
     return result.response.text();
 }
 
 async function callClaude(systemPrompt, userPrompt) {
+    const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error("CLAUDE_API_KEY is missing from environment variables");
+
+    const anthropic = new Anthropic({ apiKey });
     const response = await anthropic.messages.create({
         model: "claude-3-5-sonnet-20240620",
-        max_tokens: 1024,
+        max_tokens: systemPrompt.includes("JSON array") ? 1024 : 2500,
+        temperature: systemPrompt.includes("JSON array") ? 0.1 : 0.2,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
     });
     return response.content[0].text;
 }
 
+const providers = {
+    nvidia: callNvidia,
+    gemini: callGemini,
+    claude: callClaude,
+};
+
+function getProviderOrder(preferredProvider = 'nvidia') {
+    const normalized = preferredProvider.toLowerCase();
+    return [
+        normalized,
+        'nvidia',
+        'claude',
+        'gemini',
+    ].filter((provider, index, order) => providers[provider] && order.indexOf(provider) === index);
+}
+
+function getErrorCode(error) {
+    const message = error?.message || 'UNKNOWN_ERROR';
+    const httpMatch = message.match(/\b(?:HTTP_|status[":\s]+|Error \[)(\d{3})\b/i);
+    if (httpMatch) return `HTTP_${httpMatch[1]}`;
+    if (message.includes('quota') || message.includes('Too Many Requests')) return 'RATE_LIMIT';
+    if (message.includes('credit balance')) return 'INSUFFICIENT_CREDITS';
+    if (message.includes('API key') || message.includes('api_key')) return 'AUTH_OR_KEY_ERROR';
+    if (message.includes('missing from environment variables')) return 'MISSING_ENV';
+    return error?.name || 'ENGINE_ERROR';
+}
+
 // Master Routing Function
-async function generateWithFailover(systemPrompt, userPrompt) {
+async function generateWithFailover(systemPrompt, userPrompt, preferredProvider = 'nvidia') {
     // Demo Mode Safety Valve
     if (process.env.USE_DEMO_MODE === 'true') {
         console.log("DEMO MODE ACTIVE: Returning simulated response...");
@@ -65,20 +97,21 @@ async function generateWithFailover(systemPrompt, userPrompt) {
         return `### 🚨 Executive Summary: Simulated Breach\nSystem compromised via SSH brute force. Isolate network immediately.`;
     }
 
-    try {
-        console.log("Attempting Nvidia NIM Engine (Llama 3.1 70B)...");
-        return await callNvidia(systemPrompt, userPrompt);
-    } catch (primaryError) {
-        console.error("Nvidia API failed:", primaryError.message);
-        console.log("Falling back to Gemini Engine...");
-        
+    const errors = [];
+
+    for (const provider of getProviderOrder(preferredProvider)) {
         try {
-            return await callGemini(systemPrompt, userPrompt);
-        } catch (fallbackError) {
-            console.error("Gemini API failed:", fallbackError.message);
-            throw new Error("Critical System Failure: All LLM intelligence engines are offline.");
+            console.log(`Attempting ${provider} engine...`);
+            return await providers[provider](systemPrompt, userPrompt);
+        } catch (error) {
+            const code = getErrorCode(error);
+            console.error(`${provider} engine failed: ${code}`);
+            errors.push(`${provider}:${code}`);
         }
     }
+
+    console.error("All LLM intelligence engines failed:", errors.join(' | '));
+    throw new Error("AI engine not functional. Connection severed.");
 }
 
 module.exports = { generateWithFailover };
