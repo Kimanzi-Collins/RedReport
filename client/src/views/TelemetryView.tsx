@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UploadCloud, Clock, ShieldCheck, Activity, Target, Loader2, TerminalSquare } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
@@ -110,7 +110,7 @@ export default function TelemetryView({ state, setState }: any) {
         ) : (
           <div className="relative pl-6 md:pl-8 border-l-2 border-slate-200 dark:border-slate-700 space-y-10 py-4">
             <AnimatePresence>
-              {events.map((evt, idx) => (
+              {events.map((evt: any, idx: number) => (
                 <motion.div key={idx} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.1 }} className="relative">
                   <div className={cn("absolute -left-[35px] md:-left-[43px] w-5 h-5 rounded-full shadow-lg border-[3px] dark:border-slate-900", getSeverityColor(evt.severity))} />
                   <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 ml-4 hover:border-red-600 dark:hover:border-red-500 transition-colors">

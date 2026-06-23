@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Code2, Server, UploadCloud, Loader2, Play, Shield, TerminalSquare } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
