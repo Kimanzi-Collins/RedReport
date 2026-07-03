@@ -438,13 +438,13 @@ export default function AnalysisView({ state, setState }: any) {
 
       {/* Input Area */}
       <div className="w-full shrink-0 flex flex-col gap-2 relative z-20">
-        <div className="flex justify-between items-end px-2">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end px-2 gap-2">
           
           {selectedFiles.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 w-full md:w-auto">
               {selectedFiles.map((file: File, idx: number) => (
                 <div key={idx} className="flex items-center gap-2 bg-red-50 dark:bg-red-900/40 text-red-700 dark:text-red-300 px-3 py-1.5 rounded-full text-xs font-bold border border-red-200 dark:border-red-800 shadow-sm">
-                  <Database className="w-3 h-3" /> {file.name}
+                  <Database className="w-3 h-3 shrink-0" /> <span className="truncate max-w-[100px] md:max-w-xs">{file.name}</span>
                   <button onClick={() => removeFile(idx)} className="hover:text-black dark:hover:text-white transition-colors"><X className="w-3 h-3"/></button>
                 </div>
               ))}
@@ -452,11 +452,11 @@ export default function AnalysisView({ state, setState }: any) {
           ) : <div />}
 
           {selectedFiles.length > 0 && (
-            <div className="flex bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-1 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
-               <button onClick={() => setReportType('executive')} className={cn("px-4 py-1.5 rounded-full text-xs font-bold transition-all", reportType === 'executive' ? "bg-red-600 text-white shadow-md" : "text-slate-500 hover:text-black dark:hover:text-white")}>
+            <div className="flex w-full md:w-auto bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-1 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
+               <button onClick={() => setReportType('executive')} className={cn("flex-1 md:flex-none px-4 py-1.5 rounded-full text-xs font-bold transition-all", reportType === 'executive' ? "bg-red-600 text-white shadow-md" : "text-slate-500 hover:text-black dark:hover:text-white")}>
                  Executive Intel
                </button>
-               <button onClick={() => setReportType('investor')} className={cn("px-4 py-1.5 rounded-full text-xs font-bold transition-all", reportType === 'investor' ? "bg-red-600 text-white shadow-md" : "text-slate-500 hover:text-black dark:hover:text-white")}>
+               <button onClick={() => setReportType('investor')} className={cn("flex-1 md:flex-none px-4 py-1.5 rounded-full text-xs font-bold transition-all", reportType === 'investor' ? "bg-red-600 text-white shadow-md" : "text-slate-500 hover:text-black dark:hover:text-white")}>
                  Investor Brief
                </button>
             </div>
