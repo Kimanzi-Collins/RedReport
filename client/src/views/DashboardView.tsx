@@ -36,7 +36,7 @@ export default function DashboardView() {
         <StatCard title="Automated Mitigations" value="14,802" subtitle="Packets dropped (24h)" trend="up" icon={<CheckCircle className="w-5 h-5"/>} theme="outline" />
       </div>
       
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 flex-1 min-h-[400px]">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 flex-1 min-h-80 md:min-h-100">
         <div className="xl:col-span-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2rem] p-6 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-bold text-lg text-black dark:text-white flex items-center gap-2">
@@ -100,7 +100,7 @@ function StatCard({ title, value, subtitle, trend, icon, theme }: any) {
   };
 
   return (
-    <motion.div whileHover={{ scale: 1.02, y: -4 }} className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2rem] p-6 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between h-44 cursor-pointer">
+    <motion.div whileHover={{ scale: 1.02, y: -4 }} className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2rem] p-6 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between h-40 md:h-44 cursor-pointer">
        <div className="flex justify-between items-start w-full">
          <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center border shadow-sm", themes[theme])}>{icon}</div>
          <span className={cn("flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md border", trend === 'up' ? "text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700" : "text-red-600 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50")}>

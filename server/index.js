@@ -11,6 +11,8 @@ const { analyzeTimeline } = require('./controllers/timelineController');
 const { mapMitreAttack } = require('./controllers/mitreController');
 const { generateBlueprint } = require('./controllers/blueprintController');
 const { handleStream } = require('./controllers/streamController');
+const { createSession } = require('./controllers/sessionController');
+const { getHistory, postHistory, deleteHistory, getReports } = require('./controllers/historyController');
 
 const app = express();
 
@@ -27,6 +29,12 @@ app.post('/api/timeline', upload.array('files'), analyzeTimeline);
 app.post('/api/mitre', upload.array('files'), mapMitreAttack);
 app.post('/api/blueprint', upload.array('files'), generateBlueprint);
 app.post('/api/stream', handleStream);
+
+app.post('/api/session', createSession);
+app.get('/api/history/:section', getHistory);
+app.post('/api/history', postHistory);
+app.delete('/api/history/:section', deleteHistory);
+app.get('/api/reports', getReports);
 
 if (require.main === module) {
     // Boot sequence

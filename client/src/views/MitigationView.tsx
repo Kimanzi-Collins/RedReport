@@ -2,26 +2,33 @@ import { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Code2, Server, UploadCloud, Loader2, Play, Shield, TerminalSquare } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { analyzeLogsStream } from '../services/api';
+import { analyzeLogsStream, postHistoryMessage } from '../services/api';
 
-export default function MitigationView({ state, setState }: any) {
+export default function MitigationView({ state, setState, username }: any) {
   const { blueprint, isLoading } = state;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    
+
     setState({ ...state, isLoading: true, blueprint: '' });
-    
+
+    const filesArray = Array.from(e.target.files);
+    const fileNames = filesArray.map((f) => f.name);
+    const instruction = 'Generate a secure infrastructure blueprint (Terraform/Ansible) to patch vulnerabilities found in these logs.';
+    const clientId = Date.now().toString();
+
     try {
-      const filesArray = Array.from(e.target.files);
-      const stream = analyzeLogsStream('blueprint', filesArray, 'nvidia', 'Generate a secure infrastructure blueprint (Terraform/Ansible) to patch vulnerabilities found in these logs.');
-      
+      const stream = analyzeLogsStream('blueprint', filesArray, 'claude', instruction, undefined, username);
+
       let fullContent = '';
       for await (const chunk of stream) {
         fullContent += chunk;
         setState((prev: any) => ({ ...prev, blueprint: fullContent }));
       }
+
+      postHistoryMessage({ username, section: 'mitigation', role: 'user', content: instruction, files: fileNames, clientId: `${clientId}-u` }).catch(console.error);
+      postHistoryMessage({ username, section: 'mitigation', role: 'jarvis', content: fullContent, clientId: `${clientId}-j` }).catch(console.error);
     } catch (error) {
       console.error("Blueprint generation failed:", error);
       alert("Failed to generate mitigation blueprint.");
@@ -38,7 +45,7 @@ export default function MitigationView({ state, setState }: any) {
       {/* Header Panel */}
       <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2rem] p-5 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-6 shrink-0 text-center md:text-left">
         <div>
-          <h2 className="text-2xl font-black text-black dark:text-white flex items-center justify-center md:justify-start gap-3 tracking-tight">
+          <h2 className="text-xl md:text-2xl font-black text-black dark:text-white flex items-center justify-center md:justify-start gap-3 tracking-tight">
             <Server className="w-6 h-6 text-red-600 shrink-0" /> Defensive Orchestration
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 md:mt-1 font-medium">Generate deployable Terraform/Ansible scripts to harden infrastructure.</p>
@@ -64,7 +71,7 @@ export default function MitigationView({ state, setState }: any) {
       </div>
 
       {/* Blueprint Editor Area */}
-      <div className="flex-1 bg-[#0A0A0A] dark:bg-black rounded-[2rem] p-6 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col relative group transition-colors hover:border-red-900/50">
+      <div className="flex-1 bg-[#0A0A0A] dark:bg-black rounded-[2rem] p-4 md:p-6 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col relative group transition-colors hover:border-red-900/50">
         
         {/* Terminal Header */}
         <div className="flex items-center gap-2 mb-4 px-2 pb-4 border-b border-slate-800 text-slate-400">

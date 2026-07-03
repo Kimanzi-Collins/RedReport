@@ -7,7 +7,7 @@ const analyzeTimeline = async (req, res) => {
             return res.status(400).json({ error: 'No data files provided for timeline analysis.' });
         }
 
-        const preferredProvider = req.body.provider || 'gemini';
+        const preferredProvider = req.body.provider || 'claude';
 
         let combinedLogs = '';
         req.files.forEach(file => {

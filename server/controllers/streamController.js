@@ -1,11 +1,14 @@
+const { getFailoverStreamBody } = require('../services/streamProviders');
+
 const handleStream = async (req, res) => {
     try {
         const body = req.body || {};
-        const preferredProvider = body.provider || 'nvidia';
+        const preferredProvider = body.provider || 'claude';
         const userText = body.prompt || '';
         const reportType = body.reportType || 'executive';
         const fileContents = body.fileContents || [];
         const endpoint = body.endpoint || 'report';
+        const operator = (body.username || '').trim() || 'Operator';
 
         let combinedLogs = '';
         if (fileContents.length > 0) {
@@ -123,7 +126,7 @@ const handleStream = async (req, res) => {
                 systemPrompt = `You are Jarvis, an elite Cyber Ninja Assistant, expert Red Team Operator, and Cybersecurity Analyst. 
                 
                 CRITICAL OUTPUT DIRECTIVES:
-                1. Start with a brief, conversational 2-3 sentence summary addressing Collins directly about the uploaded logs.
+                1. Start with a brief, conversational 2-3 sentence summary addressing ${operator} directly about the uploaded logs.
                 2. On a new line, explicitly state: "**Your PDF is ready Sir.**"
                 3. Below that, provide the highly-visual Markdown report matching this EXACT template:
                 ${reportTemplate}
@@ -132,7 +135,7 @@ const handleStream = async (req, res) => {
 
             } else {
                 systemPrompt = `You are Jarvis, an elite Cyber Ninja Assistant, expert Red Team Operator, and Cybersecurity Analyst. 
-                You assist the user, Collins, with threat intelligence, penetration testing guidance, defensive infrastructure, and incident response.
+                You assist the user, ${operator}, with threat intelligence, penetration testing guidance, defensive infrastructure, and incident response.
                 
                 CRITICAL DIRECTIVES:
                 - The user has NOT uploaded any telemetry logs. Do NOT generate a threat intelligence report. 
@@ -156,97 +159,11 @@ const handleStream = async (req, res) => {
 
         if (!userPrompt.trim()) return res.status(400).json({ error: 'Please provide a prompt or upload logs.' });
 
-        const streamProviders = {
-            nvidia: async (sys, usr) => {
-                const apiKey = process.env.NVIDIA_API_KEY || process.env.VITE_NVIDIA_API_KEY;
-                if (!apiKey) throw new Error("NVIDIA_API_KEY missing");
-                const resp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-                    method: "POST", headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json", "Accept": "text/event-stream" },
-                    body: JSON.stringify({ model: "meta/llama-3.3-70b-instruct", messages: [{role: "system", content: sys}, {role: "user", content: usr}], temperature: 0.2, max_tokens: 2048, stream: true })
-                });
-                if (!resp.ok) throw new Error(`HTTP_${resp.status}`);
-                return resp.body;
-            },
-            claude: async (sys, usr) => {
-                const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
-                if (!apiKey) throw new Error("CLAUDE_API_KEY missing");
-                const resp = await fetch("https://api.anthropic.com/v1/messages", {
-                    method: "POST", headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json", "accept": "text/event-stream" },
-                    body: JSON.stringify({ model: "claude-3-5-sonnet-20240620", max_tokens: 2048, temperature: 0.2, system: sys, messages: [{role: "user", content: usr}], stream: true })
-                });
-                if (!resp.ok) throw new Error(`HTTP_${resp.status}`);
-                let buffer = '';
-                const transform = new TransformStream({
-                    transform(chunk, controller) {
-                        buffer += new TextDecoder().decode(chunk, { stream: true });
-                        const lines = buffer.split('\n');
-                        buffer = lines.pop() || '';
-                        for (const line of lines) {
-                            if (line.startsWith('data: ')) {
-                                const dataStr = line.slice(6).trim();
-                                if (dataStr === '[DONE]') continue;
-                                try {
-                                    const parsed = JSON.parse(dataStr);
-                                    if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-                                        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({choices: [{delta: {content: parsed.delta.text}}]})}\n\n`));
-                                    }
-                                } catch (e) {}
-                            }
-                        }
-                    }
-                });
-                return resp.body.pipeThrough(transform);
-            },
-            gemini: async (sys, usr) => {
-                const apiKey = process.env.GEMINI_API_KEY;
-                if (!apiKey) throw new Error("GEMINI_API_KEY missing");
-                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`, {
-                    method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ systemInstruction: {parts: [{text: sys}]}, contents: [{role: "user", parts: [{text: usr}]}] })
-                });
-                if (!resp.ok) throw new Error(`HTTP_${resp.status}`);
-                let buffer = '';
-                const transform = new TransformStream({
-                    transform(chunk, controller) {
-                        buffer += new TextDecoder().decode(chunk, { stream: true });
-                        const lines = buffer.split('\n');
-                        buffer = lines.pop() || '';
-                        for (const line of lines) {
-                            if (line.startsWith('data: ')) {
-                                const dataStr = line.slice(6).trim();
-                                if (dataStr === '[DONE]') continue;
-                                try {
-                                    const parsed = JSON.parse(dataStr);
-                                    const content = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
-                                    if (content) {
-                                        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({choices: [{delta: {content}}]})}\n\n`));
-                                    }
-                                } catch (e) {}
-                            }
-                        }
-                    }
-                });
-                return resp.body.pipeThrough(transform);
-            }
-        };
-
-        const getOrder = (pref) => {
-            const norm = (pref || 'claude').toLowerCase();
-            return [norm, 'claude', 'gemini', 'nvidia'].filter((p, i, arr) => streamProviders[p] && arr.indexOf(p) === i);
-        };
-
-        let streamBody = null;
-        for (const provider of getOrder(preferredProvider)) {
-            try {
-                streamBody = await streamProviders[provider](systemPrompt, userPrompt);
-                break;
-            } catch (error) {
-                console.error(`Stream provider ${provider} failed: ${error.message}`);
-            }
-        }
-
-        if (!streamBody) {
-            return res.status(500).json({ error: 'All streaming engines failed.' });
+        let streamBody;
+        try {
+            streamBody = await getFailoverStreamBody(systemPrompt, userPrompt, preferredProvider);
+        } catch (error) {
+            return res.status(500).json({ error: 'All streaming engines failed.', details: error.message });
         }
 
         res.setHeader('Content-Type', 'text/event-stream');

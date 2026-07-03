@@ -5,7 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
 export const analyzeLogs = async (
   endpoint: 'report' | 'timeline' | 'mitre' | 'blueprint',
   files: File[],
-  provider: 'nvidia' | 'claude' | 'gemini',
+  provider: 'claude' | 'gemini' | 'nvidia' = 'claude',
   prompt?: string,
   reportType: 'executive' | 'investor' = 'executive'
 ) => {
@@ -36,9 +36,10 @@ export const analyzeLogs = async (
 export const analyzeLogsStream = async function* (
   endpoint: 'report' | 'timeline' | 'mitre' | 'blueprint',
   files: File[],
-  provider: 'nvidia' | 'claude' | 'gemini',
+  provider: 'claude' | 'gemini' | 'nvidia' = 'claude',
   prompt?: string,
-  reportType: 'executive' | 'investor' = 'executive'
+  reportType: 'executive' | 'investor' = 'executive',
+  username?: string
 ) {
   const fileContents = await Promise.all(
     files.map(async (file) => ({
@@ -52,7 +53,8 @@ export const analyzeLogsStream = async function* (
     provider,
     prompt,
     reportType,
-    fileContents
+    fileContents,
+    username
   };
 
   const response = await fetch(`${API_BASE_URL}/stream`, {
@@ -94,4 +96,41 @@ export const analyzeLogsStream = async function* (
       }
     }
   }
+};
+
+export type ChatSection = 'analysis' | 'mitigation' | 'telemetry';
+
+export interface HistoryMessage {
+  id: string;
+  role: 'user' | 'jarvis';
+  content: string;
+  files?: string[];
+  metadata?: Record<string, any>;
+}
+
+export const createSession = async (username: string) => {
+  const response = await axios.post(`${API_BASE_URL}/session`, { username });
+  return response.data as { id: string | null; username: string };
+};
+
+export const fetchHistory = async (section: ChatSection, username: string) => {
+  const response = await axios.get(`${API_BASE_URL}/history/${section}`, { params: { username } });
+  return (response.data?.messages || []) as HistoryMessage[];
+};
+
+export const postHistoryMessage = async (params: {
+  username: string;
+  section: ChatSection;
+  role: 'user' | 'jarvis';
+  content: string;
+  files?: string[];
+  metadata?: Record<string, any>;
+  clientId: string;
+}) => {
+  await axios.post(`${API_BASE_URL}/history`, params);
+};
+
+export const fetchReports = async (username: string) => {
+  const response = await axios.get(`${API_BASE_URL}/reports`, { params: { username } });
+  return (response.data?.reports || []) as { id: string; date: string; title: string; content: string }[];
 };

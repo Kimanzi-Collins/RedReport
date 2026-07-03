@@ -1,13 +1,33 @@
+// SYNC WARNING: this file duplicates server/services/streamProviders.js
+// (fallback order, per-provider timeout, provider fetch/transform logic)
+// because Netlify Edge Functions run on Deno and cannot `require()` that
+// CommonJS module. Keep both in lockstep when changing provider behavior.
+const PROVIDER_TIMEOUT_MS = 10000;
+
+async function fetchWithTimeout(url, options, ms) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), ms);
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } catch (error) {
+        if (error.name === 'AbortError') throw new Error('TIMEOUT');
+        throw error;
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
 export default async (req, context) => {
     if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
     try {
         const body = await req.json();
-        const preferredProvider = body.provider || 'nvidia';
+        const preferredProvider = body.provider || 'claude';
         const userText = body.prompt || '';
         const reportType = body.reportType || 'executive';
         const fileContents = body.fileContents || [];
         const endpoint = body.endpoint || 'report';
+        const operator = (body.username || '').trim() || 'Operator';
 
         let combinedLogs = '';
         if (fileContents.length > 0) {
@@ -125,7 +145,7 @@ export default async (req, context) => {
                 systemPrompt = `You are Jarvis, an elite Cyber Ninja Assistant, expert Red Team Operator, and Cybersecurity Analyst. 
                 
                 CRITICAL OUTPUT DIRECTIVES:
-                1. Start with a brief, conversational 2-3 sentence summary addressing Collins directly about the uploaded logs.
+                1. Start with a brief, conversational 2-3 sentence summary addressing ${operator} directly about the uploaded logs.
                 2. On a new line, explicitly state: "**Your PDF is ready Sir.**"
                 3. Below that, provide the highly-visual Markdown report matching this EXACT template:
                 ${reportTemplate}
@@ -134,7 +154,7 @@ export default async (req, context) => {
 
             } else {
                 systemPrompt = `You are Jarvis, an elite Cyber Ninja Assistant, expert Red Team Operator, and Cybersecurity Analyst. 
-                You assist the user, Collins, with threat intelligence, penetration testing guidance, defensive infrastructure, and incident response.
+                You assist the user, ${operator}, with threat intelligence, penetration testing guidance, defensive infrastructure, and incident response.
                 
                 CRITICAL DIRECTIVES:
                 - The user has NOT uploaded any telemetry logs. Do NOT generate a threat intelligence report. 
@@ -162,20 +182,20 @@ export default async (req, context) => {
             nvidia: async (sys, usr) => {
                 const apiKey = process.env.NVIDIA_API_KEY || process.env.VITE_NVIDIA_API_KEY;
                 if (!apiKey) throw new Error("NVIDIA_API_KEY missing");
-                const resp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+                const resp = await fetchWithTimeout("https://integrate.api.nvidia.com/v1/chat/completions", {
                     method: "POST", headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json", "Accept": "text/event-stream" },
                     body: JSON.stringify({ model: "meta/llama-3.3-70b-instruct", messages: [{role: "system", content: sys}, {role: "user", content: usr}], temperature: 0.2, max_tokens: 2048, stream: true })
-                });
+                }, PROVIDER_TIMEOUT_MS);
                 if (!resp.ok) throw new Error(`HTTP_${resp.status}`);
                 return resp.body;
             },
             claude: async (sys, usr) => {
                 const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
                 if (!apiKey) throw new Error("CLAUDE_API_KEY missing");
-                const resp = await fetch("https://api.anthropic.com/v1/messages", {
+                const resp = await fetchWithTimeout("https://api.anthropic.com/v1/messages", {
                     method: "POST", headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json", "accept": "text/event-stream" },
-                    body: JSON.stringify({ model: "claude-3-5-sonnet-20240620", max_tokens: 2048, temperature: 0.2, system: sys, messages: [{role: "user", content: usr}], stream: true })
-                });
+                    body: JSON.stringify({ model: "claude-sonnet-5", max_tokens: 2048, thinking: { type: "disabled" }, system: sys, messages: [{role: "user", content: usr}], stream: true })
+                }, PROVIDER_TIMEOUT_MS);
                 if (!resp.ok) throw new Error(`HTTP_${resp.status}`);
                 let buffer = '';
                 const transform = new TransformStream({
@@ -202,10 +222,10 @@ export default async (req, context) => {
             gemini: async (sys, usr) => {
                 const apiKey = process.env.GEMINI_API_KEY;
                 if (!apiKey) throw new Error("GEMINI_API_KEY missing");
-                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`, {
+                const resp = await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`, {
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ systemInstruction: {parts: [{text: sys}]}, contents: [{role: "user", parts: [{text: usr}]}] })
-                });
+                }, PROVIDER_TIMEOUT_MS);
                 if (!resp.ok) throw new Error(`HTTP_${resp.status}`);
                 let buffer = '';
                 const transform = new TransformStream({
@@ -240,6 +260,7 @@ export default async (req, context) => {
         let streamBody = null;
         for (const provider of getOrder(preferredProvider)) {
             try {
+                console.log(`Attempting ${provider} engine (stream)...`);
                 streamBody = await streamProviders[provider](systemPrompt, userPrompt);
                 break;
             } catch (error) {

@@ -3,15 +3,16 @@ import { motion } from 'framer-motion';
 import { FileText, Download, ShieldAlert, Clock } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { marked } from 'marked';
+import { fetchReports } from '../services/api';
 
-export default function ReportsView() {
+export default function ReportsView({ username }: { username: string }) {
   const [reports, setReports] = useState<any[]>([]);
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem('redReport_reports') || '[]');
-    const filteredReports = saved.filter((r: any) => r.content.includes("Your PDF is ready Sir."));
-    setReports(filteredReports.reverse());
-  }, []);
+    fetchReports(username)
+      .then(setReports)
+      .catch((err) => console.error('Failed to fetch reports:', err));
+  }, [username]);
 
   const handleDownload = async (report: any) => {
     // PDF Rendering logic remains the same
@@ -72,7 +73,7 @@ export default function ReportsView() {
   return (
     <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 h-full max-w-7xl mx-auto items-start content-start pt-4">
       {reports.map((report) => (
-        <div key={report.id} className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-[2rem] p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between group hover:shadow-lg hover:border-red-600 dark:hover:border-red-500 transition-all duration-300">
+        <div key={report.id} className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-[2rem] p-5 md:p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between group hover:shadow-lg hover:border-red-600 dark:hover:border-red-500 transition-all duration-300">
            <div className="flex justify-between items-start mb-4">
              <div className="w-12 h-12 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-500 rounded-2xl flex items-center justify-center border border-red-100 dark:border-red-800/50 shadow-sm">
                <FileText className="w-6 h-6"/>

@@ -3,28 +3,31 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { UploadCloud, Clock, ShieldCheck, Activity, Target, Loader2, TerminalSquare } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { analyzeLogsStream } from '../services/api';
+import { analyzeLogsStream, postHistoryMessage } from '../services/api';
 
 function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
 
-export default function TelemetryView({ state, setState }: any) {
+export default function TelemetryView({ state, setState, username }: any) {
   const { events, rawLogs, isLoading } = state;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     setState({ ...state, isLoading: true, events: [], rawLogs: '' });
-    
+
     const filesArray = Array.from(e.target.files);
+    const fileNames = filesArray.map((f) => f.name);
+    const instruction = 'Extract chronological timeline';
+    const clientId = Date.now().toString();
     let combinedText = '';
     for (const file of filesArray) {
       const text = await file.text();
       combinedText += `\n--- Reading ${file.name} ---\n${text}\n`;
     }
     setState((prev: any) => ({ ...prev, rawLogs: combinedText }));
-    
+
     try {
-      const stream = analyzeLogsStream('timeline', filesArray, 'nvidia', 'Extract chronological timeline');
+      const stream = analyzeLogsStream('timeline', filesArray, 'claude', instruction, undefined, username);
       let fullContent = '';
       for await (const chunk of stream) {
         fullContent += chunk;
@@ -33,6 +36,8 @@ export default function TelemetryView({ state, setState }: any) {
       const timelineData = JSON.parse(cleanJsonString);
       if (Array.isArray(timelineData)) {
          setState((prev: any) => ({ ...prev, events: timelineData }));
+         postHistoryMessage({ username, section: 'telemetry', role: 'user', content: instruction, files: fileNames, clientId: `${clientId}-u` }).catch(console.error);
+         postHistoryMessage({ username, section: 'telemetry', role: 'jarvis', content: `Parsed ${timelineData.length} events`, clientId: `${clientId}-j`, metadata: { events: timelineData, rawLogs: combinedText } }).catch(console.error);
       } else {
          alert("Engine failed to construct a valid chronological timeline.");
       }
@@ -64,7 +69,7 @@ export default function TelemetryView({ state, setState }: any) {
         </button>
       </div>
 
-      <div className="w-full rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-slate-800 bg-[#0A0A0A] shrink-0 flex flex-col h-[280px]">
+      <div className="w-full rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-slate-800 bg-[#0A0A0A] shrink-0 flex flex-col h-55 md:h-70">
         <div className="h-10 bg-[#1A1A1A] flex items-center px-4 relative shrink-0 border-b border-slate-800">
           <div className="flex gap-2">
             <div className="w-3.5 h-3.5 rounded-full bg-[#FF5F56] border border-[#E0443E]" />
@@ -95,7 +100,7 @@ export default function TelemetryView({ state, setState }: any) {
         </div>
       </div>
 
-      <div className="w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-800">
+      <div className="w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-[2rem] p-5 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 text-red-600">
             <Loader2 className="w-10 h-10 animate-spin mb-4" />

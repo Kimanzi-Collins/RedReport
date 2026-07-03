@@ -2,7 +2,7 @@ const { generateWithFailover } = require('../services/llmService');
 
 const generateBlueprint = async (req, res) => {
     try {
-        const preferredProvider = req.body.provider || 'gemini';
+        const preferredProvider = req.body.provider || 'claude';
         let combinedLogs = '';
 
         // SPEED OPTIMIZATION 1: Payload Truncation

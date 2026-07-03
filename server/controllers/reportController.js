@@ -3,9 +3,10 @@ const { generateWithFailover } = require('../services/llmService');
 const generateReport = async (req, res) => {
     try {
         const body = req.body || {};
-        const preferredProvider = body.provider || 'gemini';
+        const preferredProvider = body.provider || 'claude';
         const userText = body.prompt || '';
-        const reportType = body.reportType || 'executive'; 
+        const reportType = body.reportType || 'executive';
+        const operator = (body.username || '').trim() || 'Operator';
         let combinedLogs = '';
 
         if (req.files && req.files.length > 0) {
@@ -98,7 +99,7 @@ const generateReport = async (req, res) => {
             systemPrompt = `You are Jarvis, an elite Cyber Ninja Assistant, expert Red Team Operator, and Cybersecurity Analyst. 
             
             CRITICAL OUTPUT DIRECTIVES:
-            1. Start with a brief, conversational 2-3 sentence summary addressing Collins directly about the uploaded logs.
+            1. Start with a brief, conversational 2-3 sentence summary addressing ${operator} directly about the uploaded logs.
             2. On a new line, explicitly state: "**Your PDF is ready Sir.**"
             3. Below that, provide the highly-visual Markdown report matching this EXACT template:
             ${reportTemplate}
@@ -108,7 +109,7 @@ const generateReport = async (req, res) => {
         } else {
             // SCENARIO 2: PURE CYBERSECURITY MENTORSHIP
             systemPrompt = `You are Jarvis, an elite Cyber Ninja Assistant, expert Red Team Operator, and Cybersecurity Analyst. 
-            You assist the user, Collins, with threat intelligence, penetration testing guidance, defensive infrastructure, and incident response.
+            You assist the user, ${operator}, with threat intelligence, penetration testing guidance, defensive infrastructure, and incident response.
             
             CRITICAL DIRECTIVES:
             - The user has NOT uploaded any telemetry logs. Do NOT generate a threat intelligence report. 

@@ -6,7 +6,7 @@ import { twMerge } from 'tailwind-merge';
 import ReactMarkdown from 'react-markdown';
 import html2pdf from 'html2pdf.js';
 import { marked } from 'marked';
-import { analyzeLogsStream } from '../services/api';
+import { analyzeLogsStream, postHistoryMessage } from '../services/api';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -47,7 +47,7 @@ const nudges = [
   }
 ];
 
-export default function AnalysisView({ state, setState }: any) {
+export default function AnalysisView({ state, setState, username }: any) {
   const { selectedFiles, promptText, isExecuting, chatHistory } = state;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -94,16 +94,18 @@ export default function AnalysisView({ state, setState }: any) {
       ? `Previous conversation context:\n${conversationContext}\n\nUser's new input:\n${finalPrompt}` 
       : finalPrompt;
 
-    setState((prev: any) => ({ 
-      ...prev, 
-      chatHistory: [...prev.chatHistory, userMessage], 
-      promptText: '', 
+    setState((prev: any) => ({
+      ...prev,
+      chatHistory: [...prev.chatHistory, userMessage],
+      promptText: '',
       isExecuting: true,
-      selectedFiles: [] 
+      selectedFiles: []
     }));
 
+    postHistoryMessage({ username, section: 'analysis', role: 'user', content: finalPrompt, files: fileNames, clientId: userMessage.id }).catch(console.error);
+
     try {
-      const stream = analyzeLogsStream('report', filesToSend, 'nvidia', enrichedPrompt, reportType);
+      const stream = analyzeLogsStream('report', filesToSend, 'claude', enrichedPrompt, reportType, username);
       const jarvisMessageId = (Date.now() + 1).toString();
       
       const initialMessage = { id: jarvisMessageId, role: 'jarvis', content: '' };
@@ -126,9 +128,7 @@ export default function AnalysisView({ state, setState }: any) {
         });
       }
 
-      const existingReports = JSON.parse(localStorage.getItem('redReport_reports') || '[]');
-      existingReports.push({ id: jarvisMessageId, date: new Date().toISOString(), title: `Threat Intel: ${new Date().toLocaleTimeString()}`, content: fullContent });
-      localStorage.setItem('redReport_reports', JSON.stringify(existingReports));
+      postHistoryMessage({ username, section: 'analysis', role: 'jarvis', content: fullContent, clientId: jarvisMessageId, metadata: { reportType } }).catch(console.error);
 
       setState((prev: any) => ({ ...prev, isExecuting: false }));
     } catch (error) {
@@ -336,41 +336,41 @@ export default function AnalysisView({ state, setState }: any) {
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col w-full max-w-5xl mx-auto h-full gap-6 pb-4">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col w-full max-w-5xl mx-auto h-full gap-4 md:gap-6 pb-[max(1rem,env(safe-area-inset-bottom))] md:pb-4">
       <input type="file" multiple ref={fileInputRef} onChange={handleFileChange} className="hidden" />
 
       {/* Chat History Interface */}
-      <div className="flex-1 overflow-y-auto w-full rounded-[2rem] p-4 space-y-6 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto w-full rounded-[2rem] p-3 md:p-4 space-y-4 md:space-y-6 custom-scrollbar">
         {chatHistory.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full pt-10">
-             <Shield className="w-16 h-16 text-slate-200 dark:text-slate-800 mb-6" />
-             <h3 className="text-2xl font-black text-black dark:text-white mb-2 tracking-tight">Jarvis Intelligence Engine</h3>
-             <p className="text-sm text-slate-500 dark:text-slate-400 mb-10 text-center max-w-md font-medium">How can I assist your operations today? Upload telemetry or select a quick action below.</p>
-             
-             {/* Themed Image Nudge Cards - Natural Colors */}
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl px-4">
+          <div className="flex flex-col items-center justify-center h-full pt-4 md:pt-10">
+             <Shield className="w-12 h-12 md:w-16 md:h-16 text-slate-200 dark:text-slate-800 mb-4 md:mb-6" />
+             <h3 className="text-xl md:text-2xl font-black text-black dark:text-white mb-2 tracking-tight">Jarvis Intelligence Engine</h3>
+             <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 md:mb-10 text-center max-w-md font-medium px-4">How can I assist your operations today? Upload telemetry or select a quick action below.</p>
+
+             {/* Themed Image Nudge Cards - compact horizontal row on mobile, hero grid on desktop */}
+             <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 px-4 pb-2 -mx-4 w-full md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:mx-0 md:px-4 md:pb-0 max-w-4xl">
                 {nudges.map((nudge) => (
-                  <motion.div 
-                    key={nudge.id} 
+                  <motion.div
+                    key={nudge.id}
                     whileHover={{ y: -5, scale: 1.02 }}
                     onClick={() => executeAction(nudge.prompt)}
-                    className="relative rounded-3xl overflow-hidden cursor-pointer shadow-lg group border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col"
+                    className="relative rounded-2xl md:rounded-3xl overflow-hidden cursor-pointer shadow-lg group border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-row md:flex-col shrink-0 w-55 md:w-auto snap-start"
                   >
                     {/* Clean Image Container */}
-                    <div className="h-28 w-full relative overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0">
-                      <img 
-                        src={nudge.img} 
-                        alt={nudge.title} 
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                    <div className="h-full w-20 md:h-28 md:w-full relative overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0">
+                      <img
+                        src={nudge.img}
+                        alt={nudge.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
                     </div>
-                    
-                    <div className="p-5 relative bg-white dark:bg-slate-900 flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                         <nudge.icon className="w-4 h-4 text-red-600 dark:text-red-500" />
-                         <h4 className="font-bold text-sm text-black dark:text-white">{nudge.title}</h4>
+
+                    <div className="p-3 md:p-5 relative bg-white dark:bg-slate-900 flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 md:mb-2">
+                         <nudge.icon className="w-4 h-4 text-red-600 dark:text-red-500 shrink-0" />
+                         <h4 className="font-bold text-sm text-black dark:text-white truncate">{nudge.title}</h4>
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{nudge.desc}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium hidden md:block">{nudge.desc}</p>
                     </div>
                   </motion.div>
                 ))}
@@ -386,7 +386,7 @@ export default function AnalysisView({ state, setState }: any) {
               )}
               
               <div className="flex flex-col gap-2 max-w-[85%]">
-                <div className={cn("rounded-[2rem] p-6 shadow-sm", msg.role === 'user' ? "bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200" : "bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200")}>
+                <div className={cn("rounded-[2rem] p-4 md:p-6 shadow-sm", msg.role === 'user' ? "bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200" : "bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200")}>
                   
                   {msg.role === 'user' && msg.files && msg.files.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-3">
