@@ -26,6 +26,11 @@ async function fetchWithTimeout(url, options, ms) {
     }
 }
 
+async function httpError(resp) {
+    const body = await resp.text().catch(() => '');
+    return new Error(`HTTP_${resp.status}${body ? `: ${body.slice(0, 300)}` : ''}`);
+}
+
 const streamProviders = {
     nvidia: async (sys, usr) => {
         const apiKey = process.env.NVIDIA_API_KEY || process.env.VITE_NVIDIA_API_KEY;
@@ -34,7 +39,7 @@ const streamProviders = {
             method: "POST", headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json", "Accept": "text/event-stream" },
             body: JSON.stringify({ model: "meta/llama-3.3-70b-instruct", messages: [{role: "system", content: sys}, {role: "user", content: usr}], temperature: 0.2, max_tokens: 2048, stream: true })
         }, PROVIDER_TIMEOUT_MS);
-        if (!resp.ok) throw new Error(`HTTP_${resp.status}`);
+        if (!resp.ok) throw await httpError(resp);
         return resp.body;
     },
     claude: async (sys, usr) => {
@@ -44,7 +49,7 @@ const streamProviders = {
             method: "POST", headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json", "accept": "text/event-stream" },
             body: JSON.stringify({ model: "claude-sonnet-5", max_tokens: 2048, thinking: { type: "disabled" }, system: sys, messages: [{role: "user", content: usr}], stream: true })
         }, PROVIDER_TIMEOUT_MS);
-        if (!resp.ok) throw new Error(`HTTP_${resp.status}`);
+        if (!resp.ok) throw await httpError(resp);
         let buffer = '';
         const transform = new TransformStream({
             transform(chunk, controller) {
@@ -74,7 +79,7 @@ const streamProviders = {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ systemInstruction: {parts: [{text: sys}]}, contents: [{role: "user", parts: [{text: usr}]}] })
         }, PROVIDER_TIMEOUT_MS);
-        if (!resp.ok) throw new Error(`HTTP_${resp.status}`);
+        if (!resp.ok) throw await httpError(resp);
         let buffer = '';
         const transform = new TransformStream({
             transform(chunk, controller) {
