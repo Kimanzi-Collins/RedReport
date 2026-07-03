@@ -5,14 +5,19 @@ const Anthropic = AnthropicSdk.Anthropic || AnthropicSdk.default || AnthropicSdk
 // Per-provider hard timeout so a hung upstream call can't block failover
 // and can't hold the request open until the platform's own gateway 504s it.
 const PROVIDER_TIMEOUT_MS = 10000;
+// NVIDIA NIM's free-tier endpoint is slower to cold-start than Claude/Gemini,
+// and it's the last fallback in the chain, so it gets extra headroom instead
+// of being cut off right as it starts responding.
+const NVIDIA_TIMEOUT_MS = 20000;
 
-// Nvidia NIM Engine (Llama 3.3 70B)
+// Nvidia NIM Engine (Llama 3.1 8B — small/fast model, not the 70B variant,
+// to keep cold-start + inference time well inside the timeout budget)
 async function callNvidia(systemPrompt, userPrompt) {
     const apiKey = process.env.NVIDIA_API_KEY;
     if (!apiKey) throw new Error("NVIDIA_API_KEY is missing from environment variables");
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), NVIDIA_TIMEOUT_MS);
 
     try {
         const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
@@ -22,7 +27,7 @@ async function callNvidia(systemPrompt, userPrompt) {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                model: "meta/llama-3.3-70b-instruct",
+                model: "meta/llama-3.1-8b-instruct",
                 messages: [
                     { role: "system", content: systemPrompt },
                     { role: "user", content: userPrompt }

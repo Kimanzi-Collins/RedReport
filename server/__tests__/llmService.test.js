@@ -90,8 +90,8 @@ describe('generateWithFailover', () => {
 
         const resultPromise = generateWithFailover('system prompt', 'user prompt', 'nvidia');
 
-        // Advance past the 10s per-provider timeout so NVIDIA's AbortController fires.
-        await jest.advanceTimersByTimeAsync(10000);
+        // Advance past NVIDIA's (longer, cold-start-tolerant) timeout so its AbortController fires.
+        await jest.advanceTimersByTimeAsync(20000);
 
         const result = await resultPromise;
 

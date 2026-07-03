@@ -3,6 +3,10 @@
 // because Netlify Edge Functions run on Deno and cannot `require()` that
 // CommonJS module. Keep both in lockstep when changing provider behavior.
 const PROVIDER_TIMEOUT_MS = 10000;
+// NVIDIA NIM's free-tier endpoint is slower to cold-start than Claude/Gemini,
+// and it's the last fallback in the chain, so it gets extra headroom instead
+// of being cut off right as it starts responding.
+const NVIDIA_TIMEOUT_MS = 20000;
 
 async function fetchWithTimeout(url, options, ms) {
     const controller = new AbortController();
@@ -189,8 +193,8 @@ export default async (req, context) => {
                 if (!apiKey) throw new Error("NVIDIA_API_KEY missing");
                 const resp = await fetchWithTimeout("https://integrate.api.nvidia.com/v1/chat/completions", {
                     method: "POST", headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json", "Accept": "text/event-stream" },
-                    body: JSON.stringify({ model: "meta/llama-3.3-70b-instruct", messages: [{role: "system", content: sys}, {role: "user", content: usr}], temperature: 0.2, max_tokens: 2048, stream: true })
-                }, PROVIDER_TIMEOUT_MS);
+                    body: JSON.stringify({ model: "meta/llama-3.1-8b-instruct", messages: [{role: "system", content: sys}, {role: "user", content: usr}], temperature: 0.2, max_tokens: 2048, stream: true })
+                }, NVIDIA_TIMEOUT_MS);
                 if (!resp.ok) throw await httpError(resp);
                 return resp.body;
             },
