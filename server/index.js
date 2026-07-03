@@ -20,6 +20,27 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
+// serverless-http's mocked request (used when this app runs inside a Netlify
+// Function) marks its stream `readable: false`, which makes express.json()
+// silently skip parsing and leave req.body as the raw Buffer it pre-attaches.
+// Locally (plain `node index.js`) express.json() parses normally and this is
+// a no-op. In production, catch the unparsed Buffer and decode it ourselves.
+app.use((req, res, next) => {
+    if (Buffer.isBuffer(req.body)) {
+        const raw = req.body.toString('utf8').trim();
+        if (!raw) {
+            req.body = {};
+        } else if ((req.headers['content-type'] || '').includes('application/json')) {
+            try {
+                req.body = JSON.parse(raw);
+            } catch (error) {
+                return res.status(400).json({ error: 'Invalid JSON body' });
+            }
+        }
+    }
+    next();
+});
+
 // Initialize Multer for in-memory file parsing
 const upload = multer({ storage: multer.memoryStorage() });
 
