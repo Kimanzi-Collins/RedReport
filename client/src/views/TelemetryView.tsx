@@ -55,11 +55,11 @@ export default function TelemetryView({ state, setState }: any) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col max-w-6xl mx-auto w-full pb-12 pt-4 gap-6">
       <input type="file" multiple ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2rem] p-6 shadow-sm border border-slate-200 dark:border-slate-800 flex justify-between items-center shrink-0">
-        <h2 className="text-xl font-black text-black dark:text-white flex items-center gap-3">
-          <Activity className="w-6 h-6 text-red-600" /> Forensics Telemetry
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2rem] p-4 md:p-6 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0">
+        <h2 className="text-xl font-black text-black dark:text-white flex items-center gap-3 w-full md:w-auto justify-center md:justify-start">
+          <Activity className="w-6 h-6 text-red-600 shrink-0" /> Forensics Telemetry
         </h2>
-        <button onClick={() => fileInputRef.current?.click()} disabled={isLoading} className="bg-black dark:bg-white text-white dark:text-black px-6 py-2.5 rounded-full font-bold text-sm flex items-center gap-2 hover:scale-105 transition-transform disabled:opacity-50 shadow-md">
+        <button onClick={() => fileInputRef.current?.click()} disabled={isLoading} className="w-full md:w-auto justify-center bg-black dark:bg-white text-white dark:text-black px-6 py-2.5 rounded-full font-bold text-sm flex items-center gap-2 hover:scale-105 transition-transform disabled:opacity-50 shadow-md shrink-0">
           {isLoading ? <Loader2 className="w-4 h-4 animate-spin text-red-600" /> : <UploadCloud className="w-4 h-4" />} Ingest Telemetry
         </button>
       </div>

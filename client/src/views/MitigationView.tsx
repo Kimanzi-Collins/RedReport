@@ -36,18 +36,18 @@ export default function MitigationView({ state, setState }: any) {
       <input type="file" multiple ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
 
       {/* Header Panel */}
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-800 flex justify-between items-center shrink-0">
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2rem] p-5 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-6 shrink-0 text-center md:text-left">
         <div>
-          <h2 className="text-2xl font-black text-black dark:text-white flex items-center gap-3 tracking-tight">
-            <Server className="w-6 h-6 text-red-600" /> Defensive Orchestration
+          <h2 className="text-2xl font-black text-black dark:text-white flex items-center justify-center md:justify-start gap-3 tracking-tight">
+            <Server className="w-6 h-6 text-red-600 shrink-0" /> Defensive Orchestration
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">Generate deployable Terraform/Ansible scripts to harden infrastructure.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 md:mt-1 font-medium">Generate deployable Terraform/Ansible scripts to harden infrastructure.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
           <button 
             onClick={() => fileInputRef.current?.click()} 
             disabled={isLoading}
-            className="bg-white dark:bg-slate-800 text-black dark:text-white border border-slate-300 dark:border-slate-700 px-6 py-3 rounded-full font-bold text-sm flex items-center gap-2 hover:border-red-600 dark:hover:border-red-500 transition-colors disabled:opacity-50 shadow-sm"
+            className="w-full md:w-auto justify-center bg-white dark:bg-slate-800 text-black dark:text-white border border-slate-300 dark:border-slate-700 px-6 py-3 rounded-full font-bold text-sm flex items-center gap-2 hover:border-red-600 dark:hover:border-red-500 transition-colors disabled:opacity-50 shadow-sm shrink-0"
           >
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin text-red-600" /> : <UploadCloud className="w-4 h-4 text-red-600" />}
             Upload Vuln Logs
@@ -55,7 +55,7 @@ export default function MitigationView({ state, setState }: any) {
           {blueprint && (
             <motion.button 
               initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-              className="bg-red-600 text-white px-6 py-3 rounded-full font-bold text-sm flex items-center gap-2 hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20"
+              className="w-full md:w-auto justify-center bg-red-600 text-white px-6 py-3 rounded-full font-bold text-sm flex items-center gap-2 hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20 shrink-0"
             >
               <Play className="w-4 h-4 fill-current" /> Deploy Blueprint
             </motion.button>
