@@ -258,6 +258,7 @@ export default async (req, context) => {
         };
 
         let streamBody = null;
+        const engineErrors = [];
         for (const provider of getOrder(preferredProvider)) {
             try {
                 console.log(`Attempting ${provider} engine (stream)...`);
@@ -265,11 +266,12 @@ export default async (req, context) => {
                 break;
             } catch (error) {
                 console.error(`Stream provider ${provider} failed: ${error.message}`);
+                engineErrors.push(`${provider}:${error.message}`);
             }
         }
 
         if (!streamBody) {
-            return new Response(JSON.stringify({ error: 'All streaming engines failed.' }), { status: 500 });
+            return new Response(JSON.stringify({ error: 'All streaming engines failed.', details: engineErrors.join(' | ') }), { status: 500 });
         }
 
         return new Response(streamBody, {

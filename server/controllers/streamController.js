@@ -163,7 +163,7 @@ const handleStream = async (req, res) => {
         try {
             streamBody = await getFailoverStreamBody(systemPrompt, userPrompt, preferredProvider);
         } catch (error) {
-            return res.status(500).json({ error: 'All streaming engines failed.', details: error.message });
+            return res.status(500).json({ error: 'All streaming engines failed.', details: error.details || error.message });
         }
 
         res.setHeader('Content-Type', 'text/event-stream');

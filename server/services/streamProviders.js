@@ -106,17 +106,19 @@ function getStreamProviderOrder(preferredProvider) {
 }
 
 async function getFailoverStreamBody(systemPrompt, userPrompt, preferredProvider) {
-    let lastError = null;
+    const errors = [];
     for (const provider of getStreamProviderOrder(preferredProvider)) {
         try {
             console.log(`Attempting ${provider} engine (stream)...`);
             return await streamProviders[provider](systemPrompt, userPrompt);
         } catch (error) {
             console.error(`Stream provider ${provider} failed: ${error.message}`);
-            lastError = error;
+            errors.push(`${provider}:${error.message}`);
         }
     }
-    throw lastError || new Error('All streaming engines failed.');
+    const failure = new Error('All streaming engines failed.');
+    failure.details = errors.join(' | ');
+    throw failure;
 }
 
 module.exports = { streamProviders, getStreamProviderOrder, getFailoverStreamBody, PROVIDER_TIMEOUT_MS };
