@@ -26,6 +26,13 @@ async function httpError(resp) {
     return new Error(`HTTP_${resp.status}${body ? `: ${body.slice(0, 300)}` : ''}`);
 }
 
+const getEnv = (key) => {
+    if (typeof Netlify !== 'undefined' && Netlify.env) return Netlify.env.get(key);
+    if (typeof Deno !== 'undefined' && Deno.env) return Deno.env.get(key);
+    if (typeof process !== 'undefined' && process.env) return process.env[key];
+    return null;
+};
+
 export default async (req, context) => {
     if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
@@ -189,7 +196,7 @@ export default async (req, context) => {
 
         const streamProviders = {
             nvidia: async (sys, usr) => {
-                const apiKey = process.env.NVIDIA_API_KEY || process.env.VITE_NVIDIA_API_KEY;
+                const apiKey = getEnv("NVIDIA_API_KEY") || getEnv("VITE_NVIDIA_API_KEY");
                 if (!apiKey) throw new Error("NVIDIA_API_KEY missing");
                 const resp = await fetchWithTimeout("https://integrate.api.nvidia.com/v1/chat/completions", {
                     method: "POST", headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json", "Accept": "text/event-stream" },
@@ -199,7 +206,7 @@ export default async (req, context) => {
                 return resp.body;
             },
             claude: async (sys, usr) => {
-                const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
+                const apiKey = getEnv("CLAUDE_API_KEY") || getEnv("ANTHROPIC_API_KEY");
                 if (!apiKey) throw new Error("CLAUDE_API_KEY missing");
                 const resp = await fetchWithTimeout("https://api.anthropic.com/v1/messages", {
                     method: "POST", headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json", "accept": "text/event-stream" },
@@ -229,7 +236,7 @@ export default async (req, context) => {
                 return resp.body.pipeThrough(transform);
             },
             gemini: async (sys, usr) => {
-                const apiKey = process.env.GEMINI_API_KEY;
+                const apiKey = getEnv("GEMINI_API_KEY");
                 if (!apiKey) throw new Error("GEMINI_API_KEY missing");
                 const resp = await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`, {
                     method: "POST", headers: { "Content-Type": "application/json" },

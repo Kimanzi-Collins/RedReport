@@ -7,7 +7,10 @@
 [functions]
   node_bundler = "esbuild"
 
-[[redirects]]
+[[edge_functions]]
+  path = "/api/stream"
+  function = "stream"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/api/:splat"
