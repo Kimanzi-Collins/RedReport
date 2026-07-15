@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Code2, Server, UploadCloud, Loader2, Play, Shield, TerminalSquare } from 'lucide-react';
+import { Code2, Server, UploadCloud, Loader2, Play, Shield, Terminal } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { analyzeLogsStream, postHistoryMessage } from '../services/api';
 
@@ -75,7 +75,7 @@ export default function MitigationView({ state, setState, username }: any) {
         
         {/* Terminal Header */}
         <div className="flex items-center gap-2 mb-4 px-2 pb-4 border-b border-slate-800 text-slate-400">
-           <TerminalSquare className="w-5 h-5 text-red-600" />
+           <Terminal className="w-5 h-5 text-red-600" />
            <span className="font-mono text-xs font-bold text-white tracking-widest">Main.tf / Playbook.yml</span>
         </div>
 

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Send, Loader2, Download, Shield, User, X, FileTerminal, Network, Code2, Database } from 'lucide-react';
+import { Plus, Send, Loader2, Download, Shield, User, X, Terminal, Network, Code2, Database } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import ReactMarkdown from 'react-markdown';
@@ -25,7 +25,7 @@ const nudges = [
     id: 1, 
     title: "Analyze Attack Vector", 
     desc: "Map the blast radius of an active threat.", 
-    icon: FileTerminal, 
+    icon: Terminal, 
     prompt: "I have a Metasploit log. Guide me through analyzing the primary attack vector.", 
     img: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=500&q=80" 
   },

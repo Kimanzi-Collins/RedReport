@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Shield, Database, Wrench, BarChart3, FileText, Moon, Sun, RefreshCw, LogOut } from 'lucide-react';
+import { Search, Shield, Database, Wrench, BarChart, FileText, Moon, Sun, RefreshCw, LogOut } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -105,7 +105,7 @@ export default function App() {
   };
 
   const navItems = [
-    { id: 'Dashboards', icon: BarChart3, label: 'Dashboards' },
+    { id: 'Dashboards', icon: BarChart, label: 'Dashboards' },
     { id: 'Telemetry', icon: Database, label: 'Telemetry' },
     { id: 'Analysis', icon: Shield, label: 'Analysis' },
     { id: 'Mitigation', icon: Wrench, label: 'Mitigation' },

@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UploadCloud, Clock, ShieldCheck, Activity, Target, Loader2, TerminalSquare } from 'lucide-react';
+import { UploadCloud, Clock, ShieldCheck, Activity, Target, Loader2, Terminal } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { analyzeLogsStream, postHistoryMessage } from '../services/api';
@@ -78,7 +78,7 @@ export default function TelemetryView({ state, setState, username }: any) {
           </div>
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <span className="text-xs font-bold text-slate-400 font-sans tracking-wide flex items-center gap-2">
-              <TerminalSquare className="w-3.5 h-3.5 text-red-600" /> root@jarvis: ~ /var/log/telemetry
+              <Terminal className="w-3.5 h-3.5 text-red-600" /> root@jarvis: ~ /var/log/telemetry
             </span>
           </div>
         </div>
