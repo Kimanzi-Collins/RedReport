@@ -41,7 +41,7 @@ const nudges = [
     id: 3, 
     title: "Zero-Day Explanation", 
     desc: "Understand complex exploits step-by-step.", 
-    icon: Code2, 
+    icon: Code, 
     prompt: "Act as my cyber mentor. Explain how a buffer overflow attack works step-by-step.", 
     img: "https://images.unsplash.com/photo-1579567761406-4684ee0c75b6?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" 
   }
