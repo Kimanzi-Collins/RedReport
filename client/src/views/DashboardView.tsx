@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Shield, AlertTriangle, CheckCircle, Activity, Server, Eye, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Shield, AlertCircle, CheckCircle, Activity, Server, Eye, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -31,7 +31,7 @@ export default function DashboardView() {
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5 }} className="flex flex-col h-full gap-6 max-w-7xl mx-auto w-full pb-12 pt-2">
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         <StatCard title="Global Risk Score" value="A-" subtitle="System highly secure" trend="up" icon={<Shield className="w-5 h-5"/>} theme="black" />
-        <StatCard title="Active Threats" value="24" subtitle="4 Critical, 20 Low" trend="down" icon={<AlertTriangle className="w-5 h-5"/>} theme="red" />
+        <StatCard title="Active Threats" value="24" subtitle="4 Critical, 20 Low" trend="down" icon={<AlertCircle className="w-5 h-5"/>} theme="red" />
         <StatCard title="MTTD" value="1.2m" subtitle="Mean Time to Detect" trend="down" icon={<Eye className="w-5 h-5"/>} theme="slate" />
         <StatCard title="Automated Mitigations" value="14,802" subtitle="Packets dropped (24h)" trend="up" icon={<CheckCircle className="w-5 h-5"/>} theme="outline" />
       </div>

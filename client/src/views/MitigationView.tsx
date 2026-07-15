@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Code2, Server, UploadCloud, Loader2, Play, Shield, Terminal } from 'lucide-react';
+import { Code, Server, UploadCloud, Loader2, Play, Shield, Terminal } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { analyzeLogsStream, postHistoryMessage } from '../services/api';
 
@@ -84,7 +84,7 @@ export default function MitigationView({ state, setState, username }: any) {
           <AnimatePresence mode="wait">
             {isLoading ? (
               <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center h-full text-red-600">
-                <Code2 className="w-12 h-12 mb-4 animate-pulse" />
+                <Code className="w-12 h-12 mb-4 animate-pulse" />
                 <p className="tracking-widest font-bold">COMPILING DEFENSIVE BLUEPRINT...</p>
               </motion.div>
             ) : !blueprint ? (

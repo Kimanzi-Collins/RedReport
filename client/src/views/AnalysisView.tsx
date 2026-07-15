@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Send, Loader2, Download, Shield, User, X, Terminal, Network, Code2, Database } from 'lucide-react';
+import { Plus, Send, Loader2, Download, Shield, User, X, Terminal, Network, Code, Database } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import ReactMarkdown from 'react-markdown';
