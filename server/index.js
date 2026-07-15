@@ -26,8 +26,14 @@ app.use(express.json({ limit: '50mb' }));
 // Locally (plain `node index.js`) express.json() parses normally and this is
 // a no-op. In production, catch the unparsed Buffer and decode it ourselves.
 app.use((req, res, next) => {
+    let raw = null;
     if (Buffer.isBuffer(req.body)) {
-        const raw = req.body.toString('utf8').trim();
+        raw = req.body.toString('utf8').trim();
+    } else if (typeof req.body === 'string') {
+        raw = req.body.trim();
+    }
+    
+    if (raw !== null) {
         if (!raw) {
             req.body = {};
         } else if ((req.headers['content-type'] || '').includes('application/json')) {

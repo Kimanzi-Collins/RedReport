@@ -54,7 +54,9 @@ export default function AnalysisView({ state, setState, username }: any) {
   const [phraseIndex, setPhraseIndex] = useState(0);
   const [reportType, setReportType] = useState<'executive'|'investor'>('executive');
 
-  useEffect(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), [chatHistory, isExecuting]);
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatHistory, isExecuting]);
 
   useEffect(() => {
     if (isExecuting) {
